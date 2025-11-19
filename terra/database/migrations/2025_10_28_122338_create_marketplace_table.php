@@ -29,7 +29,7 @@ return new class extends Migration
             $table->foreign('id_user')->references('id_user')->on('users')->onDelete('cascade');
         });
         Schema::create('cart', function (Blueprint $table) {
-            $table->id('id_cart', 10)->primary();
+            $table->string('id_cart', 10)->primary();
             $table->string('id_user', 10);
             $table->string('id_produk', 10);
             $table->integer('jumlah')->default(1);
@@ -38,7 +38,7 @@ return new class extends Migration
             $table->foreign('id_produk')->references('id_produk')->on('produk')->onDelete('cascade');
         });
         Schema::create('chatMarketplace', function (Blueprint $table) {
-            $table->id('id_chat', 10)->primary();
+            $table->string('id_chat', 10)->primary();
             $table->string('id_pengirim', 10);
             $table->string('id_penerima', 10);
             $table->timestamps();
@@ -46,19 +46,19 @@ return new class extends Migration
             $table->foreign('id_penerima')->references('id_user')->on('users')->onDelete('cascade');      
         });
         Schema::create('message', function (Blueprint $table) {
-            $table->id('id_message', 10)->primary();
+            $table->string('id_message', 10)->primary();
             $table->string('id_chat', 10);
             $table->string('id_pengirim', 10);
             $table->string('id_penerima', 10);
             $table->text('pesan');
             $table->boolean('dibaca')->default(false);
             $table->timestamps(); 
-            $table->foreign('id_chat')->references('id_chat')->on('chat_marketplace')->onDelete('cascade');
+            $table->foreign('id_chat')->references('id_chat')->on('chatMarketplace')->onDelete('cascade');
             $table->foreign('id_pengirim')->references('id_user')->on('users')->onDelete('cascade');
             $table->foreign('id_penerima')->references('id_user')->on('users')->onDelete('cascade'); 
         });
         Schema::create('penilaian_produk', function (Blueprint $table) {
-            $table->id('id_penilaian', 10)->primary();
+            $table->string('id_penilaian', 10)->primary();
             $table->string('id_produk', 10);
             $table->string('id_user', 10);
             $table->tinyInteger('rating')->unsigned();
