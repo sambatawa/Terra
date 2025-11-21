@@ -1,0 +1,25 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class ReportMessage extends Model
+{
+    use HasFactory;
+
+    protected $guarded = [];
+
+    // Relasi ke User (Siapa yang nulis pesan ini)
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    // Relasi ke Laporan Induk
+    public function report()
+    {
+        return $this->belongsTo(Report::class);
+    }
+}
