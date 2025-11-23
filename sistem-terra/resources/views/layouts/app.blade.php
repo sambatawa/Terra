@@ -11,6 +11,7 @@
 
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" integrity="sha512-K5MKH+GqVTfOs/kvXGfgfUhvG0sVUG9UM31N5GQ9DyAb47lA7by4uNmZ4dWvTkg+Aq0iMyZyYrglgjaa8zu0KQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>

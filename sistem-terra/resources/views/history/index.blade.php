@@ -28,37 +28,104 @@
                             <thead class="bg-purple-50 text-purple-900 uppercase text-xs font-bold tracking-wider">
                                 <tr>
                                     <th class="p-4">Waktu</th>
+                                    <th class="p-4">Gambar</th>
                                     <th class="p-4">Hasil Deteksi</th>
                                     <th class="p-4">Keyakinan</th>
                                     <th class="p-4">Status</th>
+                                    <th class="p-4">Sensor</th>
+                                    <th class="p-4">Info</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-gray-100">
+                            <tbody class="divide-y divide-gray-100" id="detectionRows">
                                 @forelse($data['detections'] as $det)
+                                @php
+                                    $ts = $det->created_at ?? ($det->timestamp ?? null);
+                                    try {
+                                        $dt = $ts instanceof \Carbon\Carbon ? $ts : ($ts ? \Carbon\Carbon::parse($ts) : null);
+                                    } catch (\Exception $ex) { $dt = null; }
+                                    $dateText = $dt ? $dt->format('d M Y, H:i') : '-';
+
+                                    $disease = $det->dominan_disease ?? ($det->label ?? '-');
+                                    $confVal = isset($det->confidence) ? (float)$det->confidence : (isset($det->dominan_confidence_avg) ? ((float)$det->dominan_confidence_avg * 100) : 0);
+                                    $confPercent = max(0, min(100, $confVal));
+                                    $confText = number_format($confPercent, 1) . '%';
+                                    $isSehat = (isset($det->status) && strtolower($det->status) === 'sehat') || (strpos(strtolower((string)$disease), 'sehat') !== false);
+
+                                    $img = $det->image_snapshot ?? ($det->sample_image ?? null);
+                                    $imgUrl = $img;
+                                    if ($img && !preg_match('/^https?:\/\//', $img)) {
+                                        $imgUrl = asset('storage/' . ltrim($img, '/'));
+                                    }
+                                    $arr = (array) $det;
+                                    $sensor = $det->sensor_rata_rata ?? ($arr['sensor_rata-rata'] ?? []);
+                                    if (is_object($sensor)) { $sensor = (array) $sensor; }
+                                    $suhu = is_array($sensor) ? ($sensor['suhu'] ?? null) : null;
+                                    $kelembapan = is_array($sensor) ? ($sensor['kelembapan'] ?? null) : null;
+                                    $cahaya = is_array($sensor) ? ($sensor['cahaya'] ?? null) : null;
+
+                                    $info = $det->info ?? [];
+                                    if (is_object($info)) { $info = (array) $info; }
+                                    $ciri = is_array($info) ? ($info['ciri'] ?? '') : '';
+                                    $rekom = is_array($info) ? ($info['rekomendasi_penanganan'] ?? '') : '';
+                                @endphp
                                 <tr class="hover:bg-purple-50/50 transition">
-                                    <td class="p-4 text-gray-600 font-mono text-sm">{{ $det->created_at->format('d M Y, H:i') }}</td>
-                                    <td class="p-4 font-bold text-gray-800">{{ $det->label }}</td>
+                                    <td class="p-4 text-gray-600 font-mono text-sm">{{ $dateText }}</td>
+                                    <td class="p-4">
+                                        @if($img)
+                                            <img src="{{ $imgUrl }}" alt="snapshot" class="w-16 h-16 object-cover rounded-lg border border-gray-200"/>
+                                        @else
+                                            <span class="text-gray-400">-</span>
+                                        @endif
+                                    </td>
+                                    <td class="p-4 font-bold text-gray-800">{{ $disease }}</td>
                                     <td class="p-4">
                                         <div class="flex items-center gap-2">
                                             <div class="w-16 bg-gray-200 rounded-full h-1.5">
-                                                <div class="bg-purple-500 h-1.5 rounded-full" style="width: {{ $det->confidence }}%"></div>
+                                                <div class="bg-purple-500 h-1.5 rounded-full" style="width: {{ $confPercent }}%"></div>
                                             </div>
-                                            <span class="text-xs font-bold">{{ $det->confidence }}%</span>
+                                            <span class="text-xs font-bold">{{ $confText }}</span>
                                         </div>
                                     </td>
                                     <td class="p-4">
-                                        @if(Str::contains(strtolower($det->label), 'sehat'))
+                                        @if($isSehat)
                                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Aman</span>
                                         @else
                                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Perlu Tindakan</span>
                                         @endif
                                     </td>
+                                    <td class="p-4 text-xs text-gray-600">
+                                        @if(!is_null($suhu) || !is_null($kelembapan) || !is_null($cahaya))
+                                            <div class="space-y-1">
+                                                @if(!is_null($suhu))<div class="flex items-center gap-1"><span class="text-gray-400">🌡️</span><span>{{ $suhu }}°C</span></div>@endif
+                                                @if(!is_null($kelembapan))<div class="flex items-center gap-1"><span class="text-gray-400">💧</span><span>{{ $kelembapan }}%</span></div>@endif
+                                                @if(!is_null($cahaya))<div class="flex items-center gap-1"><span class="text-gray-400">☀️</span><span>{{ $cahaya }}</span></div>@endif
+                                            </div>
+                                        @else
+                                            <span class="text-gray-400">-</span>
+                                        @endif
+                                    </td>
+                                    <td class="p-4 text-xs text-gray-700">
+                                        @if($ciri || $rekom)
+                                            <div class="space-y-1">
+                                                @if($ciri)<div><span class="font-bold text-gray-500">Ciri:</span> {{ $ciri }}</div>@endif
+                                                @if($rekom)<div><span class="font-bold text-gray-500">Rekomendasi:</span> {{ $rekom }}</div>@endif
+                                            </div>
+                                        @else
+                                            <span class="text-gray-400">-</span>
+                                        @endif
+                                    </td>
                                 </tr>
                                 @empty
-                                <tr><td colspan="4" class="p-8 text-center text-gray-400">Belum ada data deteksi.</td></tr>
+                                <tr><td colspan="7" class="p-8 text-center text-gray-400">Belum ada data deteksi.</td></tr>
                                 @endforelse
                             </tbody>
                         </table>
+                    </div>
+
+                    <div id="pagerControls" class="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+                        <button id="prevPage" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50">Kembali</button>
+                        <span class="text-xs text-gray-500">Halaman <span id="pageInfo">1 / 1</span></span>
+                        <button id="nextPage" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50">Berikutnya</button>
                     </div>
                 </div>
 
@@ -182,4 +249,31 @@
 
         </div>
     </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var tbody = document.getElementById('detectionRows');
+        var prev = document.getElementById('prevPage');
+        var next = document.getElementById('nextPage');
+        var pageInfo = document.getElementById('pageInfo');
+        if (!tbody || !prev || !next || !pageInfo) return;
+        var allRows = Array.from(tbody.querySelectorAll('tr'));
+        var emptyRow = allRows.find(function(r){ var td=r.querySelector('td'); return td && td.hasAttribute('colspan'); });
+        var dataRows = allRows.filter(function(r){ return r !== emptyRow; });
+        var perPage = 4;
+        var total = dataRows.length;
+        var totalPages = Math.max(1, Math.ceil(total / perPage));
+        var currentPage = 1;
+        function render() {
+            dataRows.forEach(function(r, i){ var page = Math.floor(i / perPage) + 1; r.style.display = (page === currentPage) ? '' : 'none'; });
+            if (emptyRow) emptyRow.style.display = (total === 0) ? '' : 'none';
+            pageInfo.textContent = currentPage + ' / ' + totalPages;
+            prev.disabled = currentPage <= 1;
+            next.disabled = currentPage >= totalPages;
+        }
+        prev.addEventListener('click', function(){ if (currentPage > 1) { currentPage--; render(); } });
+        next.addEventListener('click', function(){ if (currentPage < totalPages) { currentPage++; render(); } });
+        render();
+    });
+    </script>
 </x-app-layout>

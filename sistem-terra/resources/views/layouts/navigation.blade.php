@@ -1,8 +1,8 @@
 <nav x-data="{ open: false }" class="bg-purple-900 border-b border-purple-800 sticky top-0 z-50 shadow-lg">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
         <div class="flex justify-between h-16">
             
-            <div class="flex">
+            <div class="flex gap-4">
                 <div class="shrink-0 flex items-center gap-3">
                     <a href="{{ route('dashboard') }}">
                         <img src="{{ asset('img/logo.png') }}" class="block h-10 w-auto brightness-0 invert" alt="Terra Logo" />
@@ -12,30 +12,30 @@
 
                 <div class="hidden space-x-2 sm:-my-px sm:ml-8 sm:flex items-center">
                     
-                    <a href="{{ route('dashboard') }}" class="px-4 py-2 rounded-md text-base font-bold transition {{ request()->routeIs('dashboard') ? 'bg-purple-800 text-white' : 'text-purple-200 hover:bg-purple-800 hover:text-white' }}">
+                    <a href="{{ route('dashboard') }}" class="px-4 py-2 rounded-md text-base font-semibold transition {{ request()->routeIs('dashboard') ? 'bg-purple-800 text-white' : 'text-purple-200 hover:bg-purple-800 hover:text-white' }}">
                         Dashboard
                     </a>
 
                     @if(Auth::user()->role == 'petani')
-                        <a href="{{ route('robot') }}" class="px-4 py-2 rounded-md text-base font-bold transition {{ request()->routeIs('robot') ? 'bg-purple-800 text-white' : 'text-purple-200 hover:bg-purple-800 hover:text-white' }}">
-                            Robot AI
+                        <a href="{{ route('robot') }}" class="px-4 py-2 rounded-md text-base font-semibold transition {{ request()->routeIs('robot') ? 'bg-purple-800 text-white' : 'text-purple-200 hover:bg-purple-800 hover:text-white' }}">
+                            Kontrol
                         </a>
                         <a href="{{ route('sensor') }}" class="px-4 py-2 rounded-md text-base font-bold transition {{ request()->routeIs('sensor') ? 'bg-purple-800 text-white' : 'text-purple-200 hover:bg-purple-800 hover:text-white' }}">
-                            Sensor IoT
+                            Monitor
                         </a>
                         
-                        <a href="{{ route('forum') }}" class="px-4 py-2 rounded-md text-base font-bold transition {{ request()->routeIs('forum') ? 'bg-purple-800 text-white' : 'text-purple-200 hover:bg-purple-800 hover:text-white' }}">
+                        <a href="{{ route('forum') }}" class="px-4 py-2 rounded-md text-base font-semibold transition {{ request()->routeIs('forum') ? 'bg-purple-800 text-white' : 'text-purple-200 hover:bg-purple-800 hover:text-white' }}">
                             Forum
                         </a>
 
-                        <a href="{{ route('marketplace') }}" class="px-4 py-2 rounded-md text-base font-bold transition {{ request()->routeIs('marketplace') ? 'bg-purple-800 text-white' : 'text-purple-200 hover:bg-purple-800 hover:text-white' }}">
+                        <a href="{{ route('marketplace') }}" class="px-4 py-2 rounded-md text-base font-semibold transition {{ request()->routeIs('marketplace') ? 'bg-purple-800 text-white' : 'text-purple-200 hover:bg-purple-800 hover:text-white' }}">
                             Marketplace
                         </a>
 
-                        <a href="{{ route('history') }}" class="px-4 py-2 rounded-md text-base font-bold transition {{ request()->routeIs('history') ? 'bg-purple-800 text-white' : 'text-purple-200 hover:bg-purple-800 hover:text-white' }}">
+                        <a href="{{ route('history') }}" class="px-4 py-2 rounded-md text-base font-semibold transition {{ request()->routeIs('history') ? 'bg-purple-800 text-white' : 'text-purple-200 hover:bg-purple-800 hover:text-white' }}">
                             Riwayat
                         </a>
-                        <a href="{{ route('reports.index') }}" class="px-4 py-2 rounded-md text-base font-bold transition {{ request()->routeIs('reports.index') ? 'bg-red-600 text-white' : 'text-red-200 hover:bg-red-700 hover:text-white' }}">
+                        <a href="{{ route('reports.index') }}" class="px-4 py-2 rounded-md text-base font-semibold transition {{ request()->routeIs('reports.index') ? 'bg-red-600 text-white' : 'text-red-200 hover:bg-red-700 hover:text-white' }}">
                             Lapor Masalah
                         </a>
                     @endif
