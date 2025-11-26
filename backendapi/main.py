@@ -22,41 +22,44 @@ import firebase_admin
 from firebase_admin import credentials, db as firebase_db
 import traceback, sys, logging
 import base64
-import time 
+import time
 
-# --- KONFIGURASI DAN INISIALISASI ---
-ENV_PATH = Path(__file__).parent / ".env"
-load_dotenv(dotenv_path=str(ENV_PATH))
+# --- SENSOR DATA MODEL ---
+class SensorData(BaseModel):
+    suhu: float
+    kelembaban: int
+    cahaya: int
+    status: str
+    timestamp: str 
 
-FIREBASE_CONFIG = {"databaseURL": "https://terra-145a1-default-rtdb.asia-southeast1.firebasedatabase.app"}
+load_dotenv()
+FIREBASE_CONFIG = {"databaseURL": os.getenv("FIREBASE_DATABASE_URL")}
 FIREBASE_CREDENTIALS_PATH = os.getenv("FIREBASE_CREDENTIALS_PATH") or Path(__file__).parent / "firebase-credentials.json"
-FIREBASE_DB_URL = FIREBASE_CONFIG.get("databaseURL", "https://terra-145a1-default-rtdb.asia-southeast1.firebasedatabase.app/")
+FIREBASE_DB_URL = FIREBASE_CONFIG["databaseURL"]
 
 firebase_app = None
 last_firebase_error = None
 
-#FIREBASE
+#INISIALISASI FIREBASE
 def initialize_firebase():
     global firebase_app, last_firebase_error
     try:
         if firebase_app is not None:
-            print("[FIREBASE] already initialized")
+            print("[FIREBASE] tidak siap")
             return
         try:
-            existing = firebase_admin.get_app()
-            firebase_app = existing
-            print("[FIREBASE] using existing default app")
+            firebase_app = firebase_admin.get_app()
+            print("[FIREBASE] gunakan default")
             return
         except ValueError:
             pass
         
         cred_path = FIREBASE_CREDENTIALS_PATH
         cred_path = Path(cred_path) if isinstance(cred_path, str) else cred_path
-        print(f"[CREDENTIAL] path = {cred_path.resolve()}")
+        print(f"[FIREBASE] creds path = {cred_path.resolve()}")
         if not cred_path.exists():
-            print(f"[CREDENTIAL] tidak ada: {cred_path.name} -> auto-save gagal")
+            print(f"[FIREBASE] file credential tak ada: {cred_path.name} -> auto-save gagal")
             return
-
         cred = credentials.Certificate(str(cred_path))
         firebase_app = firebase_admin.initialize_app(cred, {"databaseURL": FIREBASE_DB_URL})
         print(f"[FIREBASE] inisialisasi berhasil, DB URL: {FIREBASE_DB_URL}")
@@ -64,12 +67,12 @@ def initialize_firebase():
     except Exception as e:
         try:
             firebase_app = firebase_admin.get_app()
-            print("[FIREBASE] recovered existing default app after exception")
+            print("[FIREBASE] gunakan default setelah error")
             last_firebase_error = None
             return
         except Exception:
             pass
-        print("[FIREBASE] CRITICAL initialization error:", e)
+        print("[FIREBASE] inisialisasi gagal:", e)
         traceback.print_exc()
         last_firebase_error = str(e)
         firebase_app = None
@@ -104,7 +107,7 @@ def load_models(force_reload: bool = False):
                 try:
                     print(f"Loading ONNX model from {ONNX_MODEL_PATH}")
                     onnx_session = ort.InferenceSession(str(ONNX_MODEL_PATH), providers=["CPUExecutionProvider"])
-                    print("✓ ONNX model loaded")
+                    print("ONNX model loaded")
                 except Exception as e:
                     print("Error loading ONNX model:", e)
                     import traceback as _tb; _tb.print_exc()
@@ -126,9 +129,7 @@ def load_models(force_reload: bool = False):
     except Exception as e:
         print("Error loading models (outer):", e)
         import traceback as _tb; _tb.print_exc()
-
-
-
+        
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
 GROQ_ENABLED = bool(GROQ_API_KEY)
 if GROQ_ENABLED and Groq is not None:
@@ -221,14 +222,14 @@ async def get_ai_explanation(disease_name: str, confidence: float) -> Dict[str, 
                 try:
                     info = json.loads(candidate.replace("'", '"'))
                 except Exception as e2:
-                    print(f"[WARN] Gagal parsing output Groq: {e2}")
+                    print("[WARNING] Gagal parsing output Groq: {}".format(e2))
                     raise
             return {
                 "ciri": info.get("ciri", ""),
                 "rekomendasi_penanganan": info.get("rekomendasi_penanganan", "")
             }
         except Exception as e:
-            print(f"[WARN] Gagal memanggil Groq: {e}")
+            print("[WARNING] Gagal memanggil Groq: {}".format(e))
     return get_fallback_explanation(disease_name, confidence)
 
 
@@ -245,7 +246,7 @@ def predict_with_onnx(image: np.ndarray) -> List[Dict]:
         if onnx_session is None:
             if yolo_model is not None:
                 return predict_with_yolo(image)
-            raise HTTPException(status_code=500, detail=f"ONNX model not loaded (tried {ONNX_MODEL_PATH.resolve()})")
+            raise HTTPException(status_code=500, detail="ONNX model ga jalan (tried {})".format(ONNX_MODEL_PATH.resolve()))
 
     img_resized = cv2.resize(image, (640, 640))
     img_rgb = img_resized
@@ -360,7 +361,7 @@ def predict_with_onnx(image: np.ndarray) -> List[Dict]:
 def predict_with_yolo(image: np.ndarray) -> List[Dict]:
     global yolo_model
     if yolo_model is None:
-        raise HTTPException(status_code=500, detail="YOLO model not loaded for fallback")
+        raise HTTPException(status_code=500, detail="YOLO model ga jalan")
     try:
         results = yolo_model.predict(source=image, imgsz=640, conf=0.5, iou=0.5, verbose=False)
         detections = []
@@ -394,7 +395,7 @@ def predict_with_yolo(image: np.ndarray) -> List[Dict]:
         print("predict_with_yolo error:", e)
         import traceback as _tb
         _tb.print_exc()
-        raise HTTPException(status_code=500, detail="YOLO fallback failed")
+        raise HTTPException(status_code=500, detail="YOLO fallback gagal")
 
 
 async def process_detection(image_bytes: bytes, sensor_data: Optional[Dict] = None) -> Dict:
@@ -424,15 +425,13 @@ async def process_detection(image_bytes: bytes, sensor_data: Optional[Dict] = No
     
     dominan_confidence_avg = float(dominan_confidence_avg)
     info = await get_ai_explanation(dominan_disease, dominan_confidence_avg)
-    if sensor_data is None:
-        sensor_data = {"suhu": 26.9, "kelembapan": 83.5, "cahaya": 42}
-    sample_image_url = f"https://your-domain.com/snapshots/snapshot_{datetime.now(timezone.utc).isoformat().replace(':', '-')}.jpg"
+    sample_image_url = f"/snapshots/snapshot_{datetime.now(timezone.utc).isoformat().replace(':', '-')}.jpg"
     result = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "dominan_disease": dominan_disease,
         "dominan_confidence_avg": dominan_confidence_avg,
         "jumlah_disease_terdeteksi": detection_counts,
-        "sensor_rata-rata": sensor_data,
+        "sensor_rata_rata": sensor_data,
         "status": status,
         "sample_image": sample_image_url,
         "info": info
@@ -445,7 +444,7 @@ SAVE_INTERVAL_SECONDS = 30
 async def save_detection_result(result: Dict, user_id: Optional[str] = None):
     try:
         if firebase_app is None:
-            print("[SAVE] Firebase not initialized - skipping save")
+            print("[SAVE] firebase belum inisialisasi, lewati simpan")
             return {"ok": False, "reason": "firebase not initialized"}
         
         loop = asyncio.get_running_loop()
@@ -460,17 +459,17 @@ async def save_detection_result(result: Dict, user_id: Optional[str] = None):
             
 
         key = await loop.run_in_executor(None, _push)
-        print(f"[SAVE SUCCESS] saved detection to path {user_id}/{key}")
+        print(f"[SAVE] simpan berhasil ke firebase: {user_id}/{key}")
         return {"ok": True, "key": str(key)}
         
     except Exception as e:
-        print(f"[SAVE ERROR] Failed to save detection to Firebase: {e}")
+        print(f"[SAVE] simpan gagal:{e}")
         traceback.print_exc()
         return {"ok": False, "reason": str(e)}
 
 def fetch_detections_from_firebase(limit: int = 100) -> List[Dict]:
     if firebase_app is None:
-        raise HTTPException(status_code=500, detail="Firebase not initialized")
+        raise HTTPException(status_code=500, detail="Firebase belum inisialisasi uyy")
     try:
         root = firebase_db.reference("detections").get()
         if not root:
@@ -488,7 +487,7 @@ def fetch_detections_from_firebase(limit: int = 100) -> List[Dict]:
                     "dominan_disease": data.get("dominan_disease", data.get("dominan", "")),
                     "dominan_confidence_avg": data.get("dominan_confidence_avg", 0.0),
                     "jumlah_disease_terdeteksi": data.get("jumlah_disease_terdeteksi", data.get("class_counts", {})),
-                    "sensor_rata_rata": data.get("sensor_rata-rata", data.get("sensor_avg", {})),
+                    "sensor_data": data.get("sensor_rata_rata", data.get("sensor_rata-rata", {})),
                     "status": data.get("status", ""),
                     "info": data.get("info", {})
                 })
@@ -496,13 +495,32 @@ def fetch_detections_from_firebase(limit: int = 100) -> List[Dict]:
         flattened.sort(key=lambda x: x.get("timestamp", datetime.min.isoformat()), reverse=True)
         return flattened[:limit]
     except Exception as e:
-        print(f"Error fetching detections from Firebase: {e}")
+        print(f"Error fetching deteksi dari Firebase:{e}")
         import traceback as _tb; _tb.print_exc()
-        raise HTTPException(status_code=500, detail="Error fetching detections from Firebase")
+        raise HTTPException(status_code=500, detail="Error fetching deteksi dari firebase")
+
+def get_latest_sensor_data_from_firebase() -> Optional[Dict]:
+    if firebase_app is None:
+        return None
+    try:
+        root = firebase_db.reference("sensor_data").get()
+        if not root:
+            return None
+        latest_key = max(root.keys())
+        latest_data = root[latest_key]
+        
+        return {
+            "suhu": latest_data.get("suhu", 26.9),
+            "kelembapan": latest_data.get("kelembaban", 83.5),
+            "cahaya": latest_data.get("cahaya", 42)
+        }
+    except Exception as e:
+        print(f"Error fetching sensor data dari Firebase:{e}")
+        return None
 
 def fetch_detection_by_key(firebase_key: str) -> Optional[Dict]:
     if firebase_app is None:
-        raise HTTPException(status_code=500, detail="Firebase not initialized")
+        raise HTTPException(status_code=500, detail="Firebase belum inisialisasi uyy")
     try:
         root = firebase_db.reference("detections").get()
         if not root:
@@ -517,7 +535,7 @@ def fetch_detection_by_key(firebase_key: str) -> Optional[Dict]:
                     "dominan_disease": data.get("dominan_disease", data.get("dominan", "")),
                     "dominan_confidence_avg": data.get("dominan_confidence_avg", 0.0),
                     "jumlah_disease_terdeteksi": data.get("jumlah_disease_terdeteksi", data.get("class_counts", {})),
-                    "sensor_rata-rata": data.get("sensor_rata-rata", data.get("sensor_avg", {})),
+                    "sensor_data": data.get("sensor_rata_rata", data.get("sensor_rata-rata", {})),
                     "status": data.get("status", ""),
                     "info": data.get("info", {})
                 }
@@ -545,7 +563,7 @@ app.add_middleware(
 #ENDPOINTS API
 @app.get("/")
 async def root():
-    return {"message": "Welcome to Terra YOLOv8 Detection API", "status": "active"}
+    return {"message": "Halo ini adalah Terra YOLOv8 Detection API", "status": "active"}
 
 @app.get("/health")
 async def health_check():
@@ -560,7 +578,6 @@ async def health_check():
 # ENDPOINT API GROQ
 @app.get("/test-groq")
 async def test_groq():
-    """Test Groq connection"""
     if not GROQ_ENABLED or groq_client is None:
         return {"status": "error", "message": "GROQ_API_KEY not set or client unavailable"}
     try:
@@ -604,7 +621,7 @@ async def detect_disease(
         return JSONResponse(content=result)
     except Exception as e:
         import traceback as _tb; _tb.print_exc()
-        raise HTTPException(status_code=500, detail=f"Detection failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/detect/realtime")
 async def detect_realtime(
@@ -657,7 +674,7 @@ async def detect_auto(
     save: bool = True
 ):    
     if file is None and not image_base64:
-        raise HTTPException(status_code=400, detail="No image provided (file or image_base64 required)")
+        raise HTTPException(status_code=400, detail="Gambar gada format base64")
         
     try:
         if file is not None:
@@ -668,10 +685,11 @@ async def detect_auto(
                     image_base64 = image_base64.split(",")[1]
                 image_bytes = base64.b64decode(image_base64)
             except Exception:
-                raise HTTPException(status_code=400, detail="Invalid base64 image")
+                raise HTTPException(status_code=400, detail="Gagal decode image_base64")
 
-        sensor_data = None
-        if any(v is not None for v in (suhu, kelembapan, cahaya)):
+        #AMBIL DARI SENSOR DATA
+        sensor_data = get_latest_sensor_data_from_firebase()
+        if sensor_data is None and any(v is not None for v in (suhu, kelembapan, cahaya)):
             sensor_data = {
                 "suhu": suhu if suhu is not None else 26.9,
                 "kelembapan": kelembapan if kelembapan is not None else 83.5,
@@ -691,13 +709,13 @@ async def detect_auto(
                 saved = bool(save_res and save_res.get("ok"))
                 if saved:
                     last_save_time = now
-                    print(f"[AUTO SAVE OK] Saved frame to Firebase. Next save in {SAVE_INTERVAL_SECONDS}s.")
+                    print("[AUTO SAVE] berhasil. Next simpan {}s lagi.".format(SAVE_INTERVAL_SECONDS))
                 else:
-                    skip_reason = f"save failed: {save_res.get('reason', 'unknown') if save_res else 'unknown'}"
-                    print(f"[AUTO SAVE FAIL] {skip_reason}")
+                    skip_reason = "save failed: {}".format(save_res.get('reason', 'unknown') if save_res else 'unknown')
+                    print("[AUTO SAVE] gagal {}".format(skip_reason))
             else:
-                skip_reason = f"Next save in {SAVE_INTERVAL_SECONDS - time_since_last_save:.1f}s"
-                print(f"[AUTO SKIP] Skipped save. {skip_reason}")
+                skip_reason = "save failed: {}".format(save_res.get('reason', 'unknown') if save_res else 'unknown')
+                print("[AUTO SAVE] gagal {}".format(skip_reason))
             
         return JSONResponse(content={"saved_this_frame": saved, "result": result, "skip_reason": skip_reason})
         
@@ -705,7 +723,7 @@ async def detect_auto(
         raise
     except Exception as e:
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Auto detection failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/detections")
 async def get_detections(limit: int = 100):
@@ -717,7 +735,7 @@ async def get_detections(limit: int = 100):
         raise
     except Exception as e:
         import traceback as _tb; _tb.print_exc()
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve detections: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/detections/{detection_id}")
 async def get_detection(detection_id: str):
@@ -725,13 +743,13 @@ async def get_detection(detection_id: str):
         loop = asyncio.get_running_loop()
         det = await loop.run_in_executor(None, fetch_detection_by_key, detection_id) 
         if not det:
-            raise HTTPException(status_code=404, detail="Detection not found")
+            raise HTTPException(status_code=404, detail="Deteksi ga masuk ke firebase")
         return det
     except HTTPException:
         raise
     except Exception as e:
         import traceback as _tb; _tb.print_exc()
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve detection: {str(e)}")
+        raise HTTPException(status_code=500, detail={"gagal":str(e)})
 
 @app.get("/firebase-test")
 async def firebase_test():
@@ -750,6 +768,136 @@ async def firebase_test():
         import traceback as _tb; tb = _tb.format_exc()
         print("[FIREBASE TEST] error:", e, tb)
         return JSONResponse(status_code=500, content={"ok": False, "error": str(e), "trace": tb})
+
+@app.post("/sensor/data")
+async def save_sensor_data(sensor_data: SensorData):
+    """Save sensor data from Laravel simulator"""
+    try:
+        print(f"[SENSOR] Received data: {sensor_data}")
+        
+        # Save ke Firebase sensor_data/{timestamp}
+        if firebase_app is not None:
+            loop = asyncio.get_running_loop()
+            def _save_sensor():
+                timestamp = int(time.time())
+                ref = firebase_db.reference("sensor_data/" + str(timestamp))
+                return ref.set({
+                    "suhu": sensor_data.suhu,
+                    "kelembaban": sensor_data.kelembaban,
+                    "cahaya": sensor_data.cahaya,
+                    "status": sensor_data.status,
+                    "timestamp": sensor_data.timestamp,
+                    "source": "laravel_simulator"
+                })
+            
+            await loop.run_in_executor(None, _save_sensor)
+            print(f"[SENSOR] Saved to sensor_data/{int(time.time())}")
+        
+        return JSONResponse(content={
+            "success": True,
+            "message": "Sensor data berhasil tersimpan yeay",
+            "data": sensor_data.dict()
+        })
+        
+    except Exception as e:
+        print(f"[SENSOR] Error simpan data: {e}")
+        import traceback as _tb; tb = _tb.format_exc()
+        print("[SENSOR] Traceback:", tb)
+        return JSONResponse(
+            status_code=500, 
+            content={
+                "success": False, 
+                "error": str(e), 
+                "trace": tb
+            }
+        )
+#ENDPOINT AMBIL DATA SENSOR
+@app.get("/sensor/data")
+async def get_sensor_data():
+    """Get latest sensor data from sensor_data"""
+    try:
+        if firebase_app is None:
+            return JSONResponse(content={"success": False, "message": "Ga nemu firebasenya"})
+        loop = asyncio.get_running_loop()
+        def _get_sensor():
+            ref = firebase_db.reference("sensor_data").limit_to_last(10)
+            return ref.get()
+        data = await loop.run_in_executor(None, _get_sensor)
+        
+        return JSONResponse(content={
+            "success": True,
+            "data": data,
+            "count": len(data) if data else 0
+        })
+        
+    except Exception as e:
+        print(f"[SENSOR] firebase ada, data tidak ada: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)}
+        )
+#ENDPOINT BACA DATA SENSOR LAST
+@app.get("/sensor/average")
+async def get_sensor_average():
+    try:
+        if firebase_app is None:
+            return JSONResponse(content={"success": False, "message": "Firebase not available"})
+        
+        loop = asyncio.get_running_loop()
+        def _get_average():
+            ref = firebase_db.reference("sensor_data").limit_to_last(15)
+            data = ref.get()
+            if not data:
+                return None
+            
+            suhu_values = []
+            kelembaban_values = []
+            cahaya_values = []
+            
+            for timestamp in data:
+                sensor = data[timestamp]
+                suhu_values.append(float(sensor["suhu"]))
+                kelembaban_values.append(int(sensor["kelembaban"]))
+                cahaya_values.append(int(sensor["cahaya"]))
+            avg_suhu = round(sum(suhu_values) / len(suhu_values), 1)
+            avg_kelembaban = round(sum(kelembaban_values) / len(kelembaban_values))
+            avg_cahaya = round(sum(cahaya_values) / len(cahaya_values))
+            
+            status = "Normal"
+            if avg_suhu > 30.5:
+                status = "Warning - Suhu Tinggi"
+            elif avg_kelembaban < 57:
+                status = "Warning - Kelembaban Rendah"
+            elif avg_cahaya > 1400:
+                status = "Warning - Cahaya Tinggi"
+            return {
+                "suhu": avg_suhu,
+                "kelembaban": avg_kelembaban,
+                "cahaya": avg_cahaya,
+                "status": status,
+                "readings_count": len(data),
+                "period": "30 seconds",
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
+        average = await loop.run_in_executor(None, _get_average)
+        
+        if average:
+            return JSONResponse(content={
+                "success": True,
+                "data": average
+            })
+        else:
+            return JSONResponse(content={
+                "success": False,
+                "message": "No sensor data available"
+            })
+        
+    except Exception as e:
+        print(f"[SENSOR] Error getting average: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)}
+        )
 
 if __name__ == "__main__":
     import uvicorn

@@ -6,24 +6,23 @@ const videoElement = document.getElementById('webcam');
 const canvas = document.getElementById('aiCanvas');
 const ctx = canvas.getContext('2d');
 let currentStream = null;
-window.ROBOT_API_URL = "http://localhost:8001"; 
-window.ROBOT_SAVE_URL = "/detect";      
+window.ROBOT_SAVE_URL = "/detect";       
 window.CSRF_TOKEN = "{{ csrf_token() }}";
 
 //CAMERA HANDLING
 async function checkCameraPermission() {
-    try {
-        if (navigator.permissions) {
-            const result = await navigator.permissions.query({ name: 'camera' });
-            if (result.state === 'denied') {
-                log("camera akses tidak ada, silahkan izinkan di settingan browser");
-                return false;
-            }
-        }
-        return true;
-    } catch (e) {
-        return true;
-    }
+    try {
+        if (navigator.permissions) {
+            const result = await navigator.permissions.query({ name: 'camera' });
+            if (result.state === 'denied') {
+                log("camera akses tidak ada, silahkan izinkan di settingan browser");
+                return false;
+            }
+        }
+        return true;
+    } catch (e) {
+        return true;
+    }
 }
 
 async function startCamera() {
@@ -464,47 +463,47 @@ function startSummaryPolling() {
 function log(msg) {
     const div = document.getElementById('console-log');
     const p = document.createElement('p');
-    p.innerText = "> " + msg;
-    div.appendChild(p);
-    div.scrollTop = div.scrollHeight;
+    p.innerText = "> " + msg;
+    div.appendChild(p);
+    div.scrollTop = div.scrollHeight;
 }
 
 //KEYBOARD VISUAL FEEDBACK
 const keyMap = {
-    w: "btn-w",
-    a: "btn-a",
-    s: "btn-s",
-    d: "btn-d",
-    arrowup: "btn-up",
-    arrowdown: "btn-down",
-    arrowleft: "btn-left",
-    arrowright: "btn-right",
+    w: "btn-w",
+    a: "btn-a",
+    s: "btn-s",
+    d: "btn-d",
+    arrowup: "btn-up",
+    arrowdown: "btn-down",
+    arrowleft: "btn-left",
+    arrowright: "btn-right",
 };
 
 const actionMap = {
-    w: "Engine: FWD",
-    a: "Engine: LEFT",
-    s: "Engine: REV",
-    d: "Engine: RIGHT",
-    arrowup: "Cam: UP",
-    arrowdown: "Cam: DOWN",
-    arrowleft: "Cam: LEFT",
-    arrowright: "Cam: RIGHT",
+    w: "Engine: FWD",
+    a: "Engine: LEFT",
+    s: "Engine: REV",
+    d: "Engine: RIGHT",
+    arrowup: "Cam: UP",
+    arrowdown: "Cam: DOWN",
+    arrowleft: "Cam: LEFT",
+    arrowright: "Cam: RIGHT",
 };
 
 document.addEventListener("keydown", e => {
-    const key = e.key.toLowerCase();
-    if (keyMap[key]) {
-        const btn = document.getElementById(keyMap[key]);
-        btn?.classList.add("translate-y-[4px]", "shadow-none");
-        log(actionMap[key]);
-    }
+    const key = e.key.toLowerCase();
+    if (keyMap[key]) {
+        const btn = document.getElementById(keyMap[key]);
+        btn?.classList.add("translate-y-[4px]", "shadow-none");
+        log(actionMap[key]);
+    }
 });
 
 document.addEventListener("keyup", e => {
-    const key = e.key.toLowerCase();
-    if (keyMap[key]) {
-        const btn = document.getElementById(keyMap[key]);
-        btn?.classList.remove("translate-y-[4px]", "shadow-none");
-    }
+    const key = e.key.toLowerCase();
+    if (keyMap[key]) {
+        const btn = document.getElementById(keyMap[key]);
+        btn?.classList.remove("translate-y-[4px]", "shadow-none");
+}
 });

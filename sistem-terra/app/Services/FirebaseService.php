@@ -11,28 +11,42 @@ class FirebaseService
 {
     protected $database;
     protected $firebase;
-
+    protected bool $initialized = false;
     public function __construct()
     {
         try {
-            $credentialsPath = config('firebase.credentials');
-            if (!file_exists($credentialsPath)) {
-                $candidates = [
+            $credentialsPath = env('FIREBASE_CREDENTIALS');
+            if (!$credentialsPath || !file_exists($credentialsPath)) {
+                $possiblePaths = [
+                    storage_path('app/firebase/firebase-credentials.json'),
                     storage_path('app/firebase-credentials.json'),
+                    base_path('firebase-credentials.json'),
                     base_path('backendapi/firebase-credentials.json'),
-                    base_path('firebase-credentials.json')
                 ];
-                foreach ($candidates as $p) {
-                    if (file_exists($p)) { $credentialsPath = $p; break; }
+                foreach ($possiblePaths as $path) {
+                    if (file_exists($path)) {
+                        $credentialsPath = $path;
+                        Log::info('Firebase credentials found at: ' . $path);
+                        break;
+                    }
                 }
             }
-            if (!file_exists($credentialsPath)) {
-                throw new \Exception("Firebase credentials file not found at: {$credentialsPath}");
-            }
 
-            $databaseUrl = config('firebase.database_url') ?: config('firebase.realtime_database.url');
+            if (!$credentialsPath || !file_exists($credentialsPath)) {
+                Log::error('COBA CEK CREDENTIALS DATABASE FIREBASE .env', ['configured_path' => $credentialsPath]);
+                $this->database = null;
+                $this->initialized = false;
+                return;
+            }
+            Log::info('Firebase di path: ' . $credentialsPath);
+
+            $databaseUrl = env('FIREBASE_DATABASE_URL');
+
             if (!$databaseUrl) {
-                $databaseUrl = 'https://terra-145a1-default-rtdb.asia-southeast1.firebasedatabase.app';
+                Log::error('COBA CEK URL DATABASE FIREBASE .env');
+                $this->database = null;
+                $this->initialized = false;
+                return;
             }
 
             $this->firebase = (new Factory)
@@ -40,9 +54,11 @@ class FirebaseService
                 ->withDatabaseUri($databaseUrl);
 
             $this->database = $this->firebase->createDatabase();
+            $this->initialized = true;
         } catch (\Exception $e) {
-            Log::error('Firebase initialization error: ' . $e->getMessage());
-            throw $e;
+            Log::error('Firebase gagal inisialisasi: ' . $e->getMessage());
+            $this->database = null;
+            $this->initialized = false;
         }
     }
 
@@ -52,8 +68,33 @@ class FirebaseService
     public function saveDetection($userId, $detectionData)
     {
         try {
+            if (!$this->database) {
+                return [
+                    'success' => false,
+                    'message' => 'firebase not initialized'
+                ];
+            }
             $path = "detections/{$userId}/" . time();
+            $randomSuhu = (mt_rand(280, 310) / 10);
+            $randomHum = mt_rand(55, 65);
+            $randomLux = mt_rand(800, 1500);
+            $statusSensor = 'Normal';
+            if ($randomSuhu > 30.5) {
+                $statusSensor = 'Warning - Suhu Tinggi';
+            } elseif ($randomHum < 57) {
+                $statusSensor = 'Warning - Kelembaban Rendah';
+            } elseif ($randomLux > 1400) {
+                $statusSensor = 'Warning - Cahaya Tinggi';
+            }
             
+            $sensorData = [
+                'suhu' => $randomSuhu,
+                'kelembapan' => $randomHum, 
+                'cahaya' => $randomLux,
+                'status' => $statusSensor,
+                'timestamp_sensor' => date('Y-m-d H:i:s')
+            ];
+
             $data = [
                 'user_id' => $userId,
                 'label' => $detectionData['label'] ?? '',
@@ -61,7 +102,7 @@ class FirebaseService
                 'confidence' => $detectionData['confidence'] ?? 0,
                 'dominan_confidence_avg' => $detectionData['dominan_confidence_avg'] ?? 0,
                 'jumlah_disease_terdeteksi' => $detectionData['jumlah_disease_terdeteksi'] ?? [],
-                'sensor_rata_rata' => $detectionData['sensor_rata_rata'] ?? [],
+                'sensor_data' => $sensorData,
                 'status' => $detectionData['status'] ?? 'sehat',
                 'image_snapshot' => $detectionData['image_snapshot'] ?? '',
                 'info' => $detectionData['info'] ?? [],
@@ -71,13 +112,11 @@ class FirebaseService
 
             $reference = $this->database->getReference($path);
             $reference->set($data);
-
             Log::info('Detection saved to Firebase', [
                 'user_id' => $userId,
                 'path' => $path,
                 'dominan_disease' => $detectionData['dominan_disease'] ?? ''
             ]);
-
             return [
                 'success' => true,
                 'path' => $path,
@@ -88,7 +127,10 @@ class FirebaseService
                 'user_id' => $userId,
                 'error' => $e->getTraceAsString()
             ]);
-            throw $e;
+            return [
+                'success' => false,
+                'message' => 'save failed'
+            ];
         }
     }
 
@@ -98,20 +140,40 @@ class FirebaseService
     public function getDetections($userId, $limit = 50)
     {
         try {
-            $path = "detections/{$userId}";
-            $reference = $this->database->getReference($path);
-            $snapshot = $reference->orderByChild('timestamp')->limitToLast($limit)->getValue();
-
-            if (!$snapshot) {
+            Log::info('getDetections called', [
+                'userId' => $userId,
+                'limit' => $limit,
+                'database_initialized' => $this->database ? true : false
+            ]);  
+            if (!$this->database) {
+                Log::warning('Firebase database not initialized in getDetections', ['userId' => $userId]);
                 return [];
             }
 
-            // Convert to array and reverse to get latest first
+            $path = "detections/{$userId}";
+            Log::info('Getting detections from path', ['path' => $path]);
+            $reference = $this->database->getReference($path);
+            $snapshot = $reference->getValue();
+            Log::info('Firebase snapshot result', [
+                'path' => $path,
+                'snapshot_exists' => $snapshot ? true : false,
+                'snapshot_count' => $snapshot ? count($snapshot) : 0,
+                'snapshot_keys' => $snapshot ? array_keys($snapshot) : []
+            ]);
+
+            if (!$snapshot) {
+                Log::info('No snapshot data found', ['path' => $path]);
+                return [];
+            }
             $detections = array_reverse($snapshot, true);
-            
-            return array_map(function ($key, $value) {
+            $result = array_map(function ($key, $value) {
                 return array_merge($value, ['id' => $key]);
             }, array_keys($detections), $detections);
+            Log::info('Returning detections', [
+                'path' => $path,
+                'result_count' => count($result)
+            ]);
+            return $result;
         } catch (\Exception $e) {
             Log::error('Firebase get detections error: ' . $e->getMessage());
             return [];

@@ -28,91 +28,101 @@
                             <thead class="bg-purple-50 text-purple-900 uppercase text-xs font-bold tracking-wider">
                                 <tr>
                                     <th class="p-4">Waktu</th>
-                                    <th class="p-4">Gambar</th>
                                     <th class="p-4">Hasil Deteksi</th>
                                     <th class="p-4">Keyakinan</th>
                                     <th class="p-4">Status</th>
-                                    <th class="p-4">Sensor</th>
-                                    <th class="p-4">Info</th>
+                                    <th class="p-4">Data Sensor</th>
+                                    <th class="p-4">Info Penyakit</th>
+                                    <th class="p-4 text-center">Aksi</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-gray-100" id="detectionRows">
+                            <tbody class="divide-y divide-gray-100">
                                 @forelse($data['detections'] as $det)
                                 @php
-                                    $ts = $det->created_at ?? ($det->timestamp ?? null);
+                                    $timestamp = $det->timestamp ?? $det->created_at ?? time();
                                     try {
-                                        $dt = $ts instanceof \Carbon\Carbon ? $ts : ($ts ? \Carbon\Carbon::parse($ts) : null);
-                                    } catch (\Exception $ex) { $dt = null; }
-                                    $dateText = $dt ? $dt->format('d M Y, H:i') : '-';
-
-                                    $disease = $det->dominan_disease ?? ($det->label ?? '-');
-                                    $confVal = isset($det->confidence) ? (float)$det->confidence : (isset($det->dominan_confidence_avg) ? ((float)$det->dominan_confidence_avg * 100) : 0);
-                                    $confPercent = max(0, min(100, $confVal));
-                                    $confText = number_format($confPercent, 1) . '%';
-                                    $isSehat = (isset($det->status) && strtolower($det->status) === 'sehat') || (strpos(strtolower((string)$disease), 'sehat') !== false);
-
-                                    $img = $det->image_snapshot ?? ($det->sample_image ?? null);
-                                    $imgUrl = $img;
-                                    if ($img && !preg_match('/^https?:\/\//', $img)) {
-                                        $imgUrl = asset('storage/' . ltrim($img, '/'));
+                                        if (is_numeric($timestamp)) {
+                                            if ($timestamp > 9999999999) {
+                                                $date = \Carbon\Carbon::createFromTimestampMs($timestamp);
+                                            } else {
+                                                $date = \Carbon\Carbon::createFromTimestamp($timestamp);
+                                            }
+                                        } else {
+                                            $date = \Carbon\Carbon::parse($timestamp);
+                                        }
+                                        $dateText = $date->format('d M Y H:i');
+                                    } catch (\Exception $e) {
+                                        $dateText = \Carbon\Carbon::now()->format('d M Y H:i');
                                     }
-                                    $arr = (array) $det;
-                                    $sensor = $det->sensor_rata_rata ?? ($arr['sensor_rata-rata'] ?? []);
-                                    if (is_object($sensor)) { $sensor = (array) $sensor; }
-                                    $suhu = is_array($sensor) ? ($sensor['suhu'] ?? null) : null;
-                                    $kelembapan = is_array($sensor) ? ($sensor['kelembapan'] ?? null) : null;
-                                    $cahaya = is_array($sensor) ? ($sensor['cahaya'] ?? null) : null;
-
+                                    
+                                    $disease = $det->dominan_disease ?? $det->label ?? 'Tidak Dikenali';
+                                    $confidence = $det->confidence ?? $det->dominan_confidence_avg ?? 0;
+                                    if ($confidence < 1) $confidence = $confidence * 100;
+                                    $isHealthy = Str::contains(strtolower($disease), 'sehat') || 
+                                                (isset($det->status) && strtolower($det->status) === 'sehat');
+                                    
+                                    $sensorData = $det->sensor_data ?? $det->sensor_rata_rata ?? $det->{'sensor_rata-rata'} ?? [];
+                                    if (is_string($sensorData)) {
+                                        $sensorData = json_decode($sensorData, true) ?? [];
+                                    }
+                                    $suhu = $sensorData['suhu'] ?? 'N/A';
+                                    $kelembapan = $sensorData['kelembapan'] ?? 'N/A';
+                                    $cahaya = $sensorData['cahaya'] ?? 'N/A';
+                                    $sensorStatus = $sensorData['status'] ?? 'Normal';
+                                    
+                                    //INFO DATA
                                     $info = $det->info ?? [];
-                                    if (is_object($info)) { $info = (array) $info; }
-                                    $ciri = is_array($info) ? ($info['ciri'] ?? '') : '';
-                                    $rekom = is_array($info) ? ($info['rekomendasi_penanganan'] ?? '') : '';
+                                    $ciri = $info['ciri'] ?? 'Tidak ada informasi';
+                                    $rekomendasi = $info['rekomendasi_penanganan'] ?? 'Tidak ada rekomendasi';
                                 @endphp
                                 <tr class="hover:bg-purple-50/50 transition">
                                     <td class="p-4 text-gray-600 font-mono text-sm">{{ $dateText }}</td>
-                                    <td class="p-4">
-                                        @if($img)
-                                            <img src="{{ $imgUrl }}" alt="snapshot" class="w-16 h-16 object-cover rounded-lg border border-gray-200"/>
-                                        @else
-                                            <span class="text-gray-400">-</span>
-                                        @endif
-                                    </td>
                                     <td class="p-4 font-bold text-gray-800">{{ $disease }}</td>
                                     <td class="p-4">
                                         <div class="flex items-center gap-2">
                                             <div class="w-16 bg-gray-200 rounded-full h-1.5">
-                                                <div class="bg-purple-500 h-1.5 rounded-full" style="width: {{ $confPercent }}%"></div>
+                                                <div class="bg-purple-500 h-1.5 rounded-full" style="width: {{ min(100, $confidence) }}%"></div>
                                             </div>
-                                            <span class="text-xs font-bold">{{ $confText }}</span>
+                                            <span class="text-xs font-bold">{{ number_format($confidence, 1) }}%</span>
                                         </div>
                                     </td>
                                     <td class="p-4">
-                                        @if($isSehat)
+                                        @if($isHealthy)
                                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Aman</span>
                                         @else
                                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Perlu Tindakan</span>
                                         @endif
                                     </td>
                                     <td class="p-4 text-xs text-gray-600">
-                                        @if(!is_null($suhu) || !is_null($kelembapan) || !is_null($cahaya))
+                                        @if($suhu || $kelembapan || $cahaya)
                                             <div class="space-y-1">
-                                                @if(!is_null($suhu))<div class="flex items-center gap-1"><span class="text-gray-400">🌡️</span><span>{{ $suhu }}°C</span></div>@endif
-                                                @if(!is_null($kelembapan))<div class="flex items-center gap-1"><span class="text-gray-400">💧</span><span>{{ $kelembapan }}%</span></div>@endif
-                                                @if(!is_null($cahaya))<div class="flex items-center gap-1"><span class="text-gray-400">☀️</span><span>{{ $cahaya }}</span></div>@endif
+                                                @if($suhu)<div class="flex items-center gap-1"><span class="text-gray-400">🌡️</span><span>{{ $suhu }}°C</span></div>@endif
+                                                @if($kelembapan)<div class="flex items-center gap-1"><span class="text-gray-400">💧</span><span>{{ $kelembapan }}%</span></div>@endif
+                                                @if($cahaya)<div class="flex items-center gap-1"><span class="text-gray-400">☀️</span><span>{{ $cahaya }} Lux</span></div>@endif
+                                                @if(isset($sensorData['status']) && str_contains($sensorData['status'], 'Warning'))
+                                                    <div class="text-xs font-bold text-yellow-600 bg-yellow-50 px-1.5 py-0.5 rounded mt-1">
+                                                        ⚠️ {{ $sensorData['status'] }}
+                                                    </div>
+                                                @endif
                                             </div>
                                         @else
                                             <span class="text-gray-400">-</span>
                                         @endif
                                     </td>
-                                    <td class="p-4 text-xs text-gray-700">
-                                        @if($ciri || $rekom)
-                                            <div class="space-y-1">
-                                                @if($ciri)<div><span class="font-bold text-gray-500">Ciri:</span> {{ $ciri }}</div>@endif
-                                                @if($rekom)<div><span class="font-bold text-gray-500">Rekomendasi:</span> {{ $rekom }}</div>@endif
-                                            </div>
-                                        @else
-                                            <span class="text-gray-400">-</span>
-                                        @endif
+                                    <td class="p-4 text-xs text-gray-700 max-w-xs">
+                                        <div class="space-y-1">
+                                            <div><span class="font-bold text-gray-500">Ciri:</span> {{ $ciri }}</div>
+                                            <div><span class="font-bold text-gray-500">Rekomendasi:</span> {{ $rekomendasi }}</div>
+                                        </div>
+                                    </td>
+                                    <td class="p-4 text-center">
+                                        <button onclick="deleteDetection({{ data_get($det, 'id') }}, '{{ $disease }}')" 
+                                                class="text-red-600 hover:text-red-900 hover:bg-red-50 p-2 rounded-lg transition-colors"
+                                                title="Hapus Data">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
                                     </td>
                                 </tr>
                                 @empty
@@ -122,10 +132,17 @@
                         </table>
                     </div>
 
-                    <div id="pagerControls" class="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-                        <button id="prevPage" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50">Kembali</button>
-                        <span class="text-xs text-gray-500">Halaman <span id="pageInfo">1 / 1</span></span>
-                        <button id="nextPage" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50">Berikutnya</button>
+                    <!-- Pagination Controls -->
+                    <div class="bg-gray-50 px-4 py-3 border-t border-gray-200 flex items-center justify-between">
+                        <button id="prevPage" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed">
+                            ← Sebelumnya
+                        </button>
+                        <span class="text-xs text-gray-600">
+                            Halaman <span id="currentPage" class="font-bold">1</span> dari <span id="totalPages" class="font-bold">1</span>
+                        </span>
+                        <button id="nextPage" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed">
+                            Berikutnya →
+                        </button>
                     </div>
                 </div>
 
@@ -183,7 +200,6 @@
                 </div>
 
             @elseif($role == 'penyuluh')
-                
                 <div class="grid grid-cols-2 md:grid-cols-3 gap-6 mb-8">
                     <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 flex items-center gap-4">
                         <div class="p-3 bg-yellow-100 rounded-xl text-yellow-600">
@@ -249,31 +265,245 @@
 
         </div>
     </div>
-
     <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        var tbody = document.getElementById('detectionRows');
-        var prev = document.getElementById('prevPage');
-        var next = document.getElementById('nextPage');
-        var pageInfo = document.getElementById('pageInfo');
-        if (!tbody || !prev || !next || !pageInfo) return;
-        var allRows = Array.from(tbody.querySelectorAll('tr'));
-        var emptyRow = allRows.find(function(r){ var td=r.querySelector('td'); return td && td.hasAttribute('colspan'); });
-        var dataRows = allRows.filter(function(r){ return r !== emptyRow; });
-        var perPage = 4;
-        var total = dataRows.length;
-        var totalPages = Math.max(1, Math.ceil(total / perPage));
-        var currentPage = 1;
-        function render() {
-            dataRows.forEach(function(r, i){ var page = Math.floor(i / perPage) + 1; r.style.display = (page === currentPage) ? '' : 'none'; });
-            if (emptyRow) emptyRow.style.display = (total === 0) ? '' : 'none';
-            pageInfo.textContent = currentPage + ' / ' + totalPages;
-            prev.disabled = currentPage <= 1;
-            next.disabled = currentPage >= totalPages;
+    </script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-analytics.js";
+
+        let allDetections = [];
+        let currentPage = 1;
+        const itemsPerPage = 4;
+
+        const firebaseConfig = {
+            apiKey: "{{ config('services.firebase.api_key') }}",
+            authDomain: "{{ config('services.firebase.auth_domain') }}",
+            databaseURL: "{{ config('services.firebase.database_url') }}",
+            projectId: "{{ config('services.firebase.project_id') }}",
+            storageBucket: "{{ config('services.firebase.storage_bucket') }}",
+            messagingSenderId: "{{ config('services.firebase.messaging_sender_id') }}",
+            appId: "{{ config('services.firebase.app_id') }}",
+            measurementId: "{{ config('services.firebase.measurement_id') }}"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+        const analytics = getAnalytics(app);
+
+        function deleteDetection(id, diseaseName) {
+            console.log('deleteDetection called with id:', id, 'diseaseName:', diseaseName);
+            if (confirm('Apakah Anda yakin ingin menghapus data deteksi "' + diseaseName + '"?')) {
+                fetch('/history/' + id, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification('Data berhasil dihapus', 'success');
+                        updateTableFromFirebase();
+                    } else {
+                        showNotification('Gagal menghapus data', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error deleting detection:', error);
+                    showNotification('Terjadi kesalahan saat menghapus data', 'error');
+                });
+            }
         }
-        prev.addEventListener('click', function(){ if (currentPage > 1) { currentPage--; render(); } });
-        next.addEventListener('click', function(){ if (currentPage < totalPages) { currentPage++; render(); } });
-        render();
-    });
+
+        function showNotification(message, type) {
+            let notification = document.getElementById('firebaseNotification');
+            if (!notification) {
+                notification = document.createElement('div');
+                notification.id = 'firebaseNotification';
+                notification.className = 'fixed top-4 right-4 z-50 hidden';
+                const bgColor = type === 'success' ? 'bg-green-500' : (type === 'error' ? 'bg-red-500' : 'bg-blue-500');
+                notification.innerHTML = 
+                    '<div class="' + bgColor + ' text-white px-4 py-2 rounded-lg shadow-lg">' +
+                        '<span class="text-sm font-medium">' + message + '</span>' +
+                    '</div>';
+                document.body.appendChild(notification);
+            }
+            notification.classList.remove('hidden');
+            setTimeout(function() {
+                notification.classList.add('hidden');
+            }, 3000);
+        }
+
+        function updateTableFromFirebase() {
+            fetch('/history/refresh')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        updateTable(data.detections);
+                        showNotification('Data diperbarui secara real-time', 'success');
+                    }
+                })
+                .catch(error => console.error('Error updating table:', error));
+        }
+
+        function updateTable(newDetections) {
+            allDetections = newDetections;
+            currentPage = 1;
+            updatePaginationDisplay();
+            renderCurrentPage();
+        }
+
+        function updatePaginationDisplay() {
+            const totalPages = Math.max(1, Math.ceil(allDetections.length / itemsPerPage));
+            document.getElementById('currentPage').textContent = currentPage;
+            document.getElementById('totalPages').textContent = totalPages;
+            const prevBtn = document.getElementById('prevPage');
+            const nextBtn = document.getElementById('nextPage');
+            prevBtn.disabled = currentPage <= 1;
+            nextBtn.disabled = currentPage >= totalPages;
+        }
+
+        function renderCurrentPage() {
+            const tbody = document.querySelector('tbody');
+            if (!tbody) return;
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const pageData = allDetections.slice(startIndex, endIndex);
+            tbody.innerHTML = '';
+            if (pageData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-gray-400">Belum ada data deteksi.</td></tr>';
+                return;
+            }
+            pageData.forEach((det, index) => {
+                const row = createDetectionRow(det, startIndex + index);
+                tbody.appendChild(row);
+            });
+        }
+
+        function createDetectionRow(det, index) {
+            const tr = document.createElement('tr');
+            tr.className = 'hover:bg-purple-50/50 transition';
+            const timestamp = det.timestamp || det.created_at || Date.now();
+            let date;
+            try {
+                if (typeof timestamp === 'number') {
+                    if (timestamp > 9999999999) {
+                        date = new Date(timestamp);
+                    } else {
+                        date = new Date(timestamp * 1000);
+                    }
+                } else {
+                    date = new Date(timestamp);
+                }
+                if (isNaN(date.getTime())) {
+                    throw new Error('Invalid date');
+                }
+            } catch (e) {
+                date = new Date();
+            }
+            const dateText = date.toLocaleDateString('id-ID', {day: '2-digit', month: 'short', year: 'numeric'}) + ' ' + date.toLocaleTimeString('id-ID', {hour: '2-digit', minute: '2-digit'});
+            const disease = det.dominan_disease || det.label || 'Tidak Dikenali';
+            const confidence = det.confidence || det.dominan_confidence_avg || 0;
+            const confPercent = confidence < 1 ? confidence * 100 : confidence;
+            const status = det.status || 'unknown';
+            const isHealthy = disease.toLowerCase().includes('sehat') || status.toLowerCase() === 'sehat';
+            const sensorData = det.sensor_data || det.sensor_rata_rata || det['sensor_rata-rata'] || {};
+            const suhu = sensorData.suhu || '-';
+            const kelembapan = sensorData.kelembapan || '-';
+            const cahaya = sensorData.cahaya || '-';
+            const sensorStatus = sensorData.status || 'Normal';
+            const info = det.info || {};
+            const ciri = info.ciri || '-';
+            const rekomendasi = info.rekomendasi_penanganan || '-';
+            tr.innerHTML = `
+                <td class="p-4 text-gray-600 font-mono text-sm">${dateText}</td>
+                <td class="p-4 font-bold text-gray-800">${disease.replace(/_/g, ' ')}</td>
+                <td class="p-4">
+                    <div class="flex items-center gap-2">
+                        <div class="w-16 bg-gray-200 rounded-full h-1.5">
+                            <div class="bg-purple-500 h-1.5 rounded-full" style="width: ${Math.min(100, confPercent)}%"></div>
+                        </div>
+                        <span class="text-xs font-bold">${confPercent.toFixed(1)}%</span>
+                    </div>
+                </td>
+                <td class="p-4">
+                    ${isHealthy ? 
+                        '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Aman</span>' :
+                        '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Perlu Tindakan</span>'
+                    }
+                </td>
+                <td class="p-4 text-xs text-gray-600">
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-1"><span class="text-gray-400">🌡️</span><span>${suhu}${suhu !== '-' ? '°C' : ''}</span></div>
+                        <div class="flex items-center gap-1"><span class="text-gray-400">💧</span><span>${kelembapan}${kelembapan !== '-' ? '%' : ''}</span></div>
+                        <div class="flex items-center gap-1"><span class="text-gray-400">☀️</span><span>${cahaya}${cahaya !== '-' ? ' Lux' : ''}</span></div>
+                        ${sensorStatus.includes('Warning') ? `<div class="text-xs font-bold text-yellow-600 bg-yellow-50 px-1.5 py-0.5 rounded mt-1">⚠️ ${sensorStatus}</div>` : ''}
+                    </div>
+                </td>
+                <td class="p-4 text-xs text-gray-700 max-w-xs">
+                    <div class="space-y-1">
+                        <div><span class="font-bold text-gray-500">Ciri:</span> ${ciri !== '-' ? ciri : 'Tidak ada'}</div>
+                        <div><span class="font-bold text-gray-500">Rekomendasi:</span> ${rekomendasi !== '-' ? rekomendasi : 'Tidak ada'}</div>
+                    </div>
+                </td>
+                <td class="p-4 text-center">
+                    <button onclick="window.deleteDetection(${det.id || det['id']}, '${disease.replace(/'/g, "\\'")}')" 
+                            class="text-red-600 hover:text-red-900 hover:bg-red-50 p-2 rounded-lg transition-colors"
+                            title="Hapus Data">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    </button>
+                </td>
+            `;
+            return tr;
+        }
+
+        function initializePagination() {
+            fetch('/history/refresh')
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Initial data received:', data);
+                    if (data.success) {
+                        allDetections = data.detections;
+                        console.log('All detections:', allDetections);
+                        updatePaginationDisplay();
+                        renderCurrentPage();
+                    } else {
+                        console.error('Server returned error:', data.message);
+                    }
+                })
+                .catch(error => console.error('Error loading data:', error));
+        }
+        window.deleteDetection = deleteDetection;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initializePagination();
+            document.getElementById('prevPage').addEventListener('click', () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    updatePaginationDisplay();
+                    renderCurrentPage();
+                }
+            });
+            document.getElementById('nextPage').addEventListener('click', () => {
+                const totalPages = Math.ceil(allDetections.length / itemsPerPage);
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    updatePaginationDisplay();
+                    renderCurrentPage();
+                }
+            });
+            const autoSimpanRef = ref(database, 'detections/autoSimpan');
+            onValue(autoSimpanRef, (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    console.log('Real-time update from autoSimpan:', Object.keys(data).length, 'records');
+                    updateTableFromFirebase();
+                }
+            });
+        });
     </script>
 </x-app-layout>

@@ -156,7 +156,6 @@
     </div>
 
     <script src="{{ asset('js/robot.js') }}">
-        window.ROBOT_API_URL = "http://localhost:8001"; 
         window.ROBOT_SAVE_URL = "/save-detection";      
         window.CSRF_TOKEN = "{{ csrf_token() }}";
     </script>

@@ -7,7 +7,6 @@
                 </span>
                 Terra Dashboard: Monitoring IoT
             </h2>
-            
             <div class="flex items-center gap-3 px-4 py-2 bg-white border border-purple-200 rounded-full shadow-sm">
                 <span class="relative flex h-3 w-3">
                     <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
@@ -22,27 +21,20 @@
             </div>
         </div>
     </x-slot>
-
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
     <div class="py-10 bg-[#F3F0FF] min-h-screen relative overflow-hidden">
-        
         <div class="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-purple-200/50 to-transparent pointer-events-none"></div>
         <div class="absolute -top-20 -right-20 w-96 h-96 bg-purple-300/20 rounded-full blur-3xl pointer-events-none"></div>
         <div class="absolute top-40 -left-20 w-72 h-72 bg-pink-300/20 rounded-full blur-3xl pointer-events-none"></div>
-
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 relative z-10">
-            
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                
                 <div class="bg-white p-6 rounded-3xl shadow-[0_10px_30px_-10px_rgba(239,68,68,0.2)] border border-red-100 relative overflow-hidden group hover:-translate-y-1 transition-all duration-300">
                     <div class="absolute top-0 right-0 w-24 h-24 bg-red-50 rounded-bl-full -mr-4 -mt-4 transition-all group-hover:bg-red-100"></div>
-                    
                     <div class="flex justify-between items-start relative z-10">
                         <div>
                             <p class="text-gray-500 text-xs uppercase font-bold tracking-wider mb-1">Suhu Udara</p>
                             <h3 class="text-4xl font-extrabold text-gray-800">
-                                <span id="val-suhu">29.4</span><span class="text-lg text-gray-400 font-medium ml-1">°C</span>
+                                <span id="val-suhu">--</span><span class="text-lg text-gray-400 font-medium ml-1">°C</span>
                             </h3>
                         </div>
                         <div class="p-3 bg-red-100 text-red-600 rounded-2xl">
@@ -56,15 +48,13 @@
                         <span class="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-lg">Status: Normal</span>
                     </div>
                 </div>
-
                 <div class="bg-white p-6 rounded-3xl shadow-[0_10px_30px_-10px_rgba(59,130,246,0.2)] border border-blue-100 relative overflow-hidden group hover:-translate-y-1 transition-all duration-300">
-                    <div class="absolute top-0 right-0 w-24 h-24 bg-blue-50 rounded-bl-full -mr-4 -mt-4 transition-all group-hover:bg-blue-100"></div>
-                    
+                    <div class="absolute top-0 right-0 w-24 h-24 bg-blue-50 rounded-bl-full -mr-4 -mt-4 transition-all group-hover:bg-blue-100"></div>                    
                     <div class="flex justify-between items-start relative z-10">
                         <div>
                             <p class="text-gray-500 text-xs uppercase font-bold tracking-wider mb-1">Kelembaban Tanah</p>
                             <h3 class="text-4xl font-extrabold text-gray-800">
-                                <span id="val-hum">60</span><span class="text-lg text-gray-400 font-medium ml-1">%</span>
+                                <span id="val-hum">--</span><span class="text-lg text-gray-400 font-medium ml-1">%</span>
                             </h3>
                         </div>
                         <div class="p-3 bg-blue-100 text-blue-600 rounded-2xl">
@@ -78,15 +68,13 @@
                         <span class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-lg">Kondisi: Basah Ideal</span>
                     </div>
                 </div>
-
                 <div class="bg-white p-6 rounded-3xl shadow-[0_10px_30px_-10px_rgba(234,179,8,0.2)] border border-yellow-100 relative overflow-hidden group hover:-translate-y-1 transition-all duration-300">
                     <div class="absolute top-0 right-0 w-24 h-24 bg-yellow-50 rounded-bl-full -mr-4 -mt-4 transition-all group-hover:bg-yellow-100"></div>
-                    
                     <div class="flex justify-between items-start relative z-10">
                         <div>
                             <p class="text-gray-500 text-xs uppercase font-bold tracking-wider mb-1">Intensitas Cahaya</p>
                             <h3 class="text-4xl font-extrabold text-gray-800">
-                                <span id="val-lux">1250</span><span class="text-lg text-gray-400 font-medium ml-1">Lux</span>
+                                <span id="val-lux">--</span><span class="text-lg text-gray-400 font-medium ml-1">Lux</span>
                             </h3>
                         </div>
                         <div class="p-3 bg-yellow-100 text-yellow-600 rounded-2xl">
@@ -101,9 +89,7 @@
                     </div>
                 </div>
             </div>
-
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
                 <div class="lg:col-span-2 bg-white p-6 rounded-3xl shadow-xl border border-purple-100">
                     <div class="flex justify-between items-center mb-6">
                         <h3 class="font-bold text-gray-800 flex items-center gap-2">
@@ -114,7 +100,6 @@
                         </h3>
                         <select class="text-xs font-bold border-gray-200 rounded-lg text-gray-500 bg-gray-50 focus:ring-purple-500 focus:border-purple-500">
                             <option>Live Data</option>
-                            <option>1 Jam Terakhir</option>
                         </select>
                     </div>
                     <div class="h-72">
@@ -148,7 +133,6 @@
                         <p class="text-[10px] text-gray-400 pl-6 mt-1">Last Update: Just now</p>
                     </div>
                 </div>
-
             </div>
 
             <div class="mt-8 bg-white rounded-3xl shadow-xl border border-purple-100 overflow-hidden">
@@ -188,12 +172,10 @@
                     </table>
                 </div>
             </div>
-
         </div>
     </div>
 
     <script>
-        // 1. Setup Chart.js (Styling Updated)
         const ctx = document.getElementById('sensorChart').getContext('2d');
         const sensorChart = new Chart(ctx, {
             type: 'line',
@@ -229,7 +211,7 @@
                 scales: {
                     y: { 
                         beginAtZero: false, min: 20, max: 80,
-                        grid: { color: '#F3F4F6' } // Grid halus
+                        grid: { color: '#F3F4F6' }
                     },
                     x: {
                         grid: { display: false }
@@ -241,22 +223,67 @@
             }
         });
 
-        // 2. Fungsi Update Data Real-time (Looping)
-        setInterval(function() {
-            let randomSuhu = (Math.random() * (31 - 28) + 28).toFixed(1);
-            let randomHum = Math.floor(Math.random() * (65 - 55) + 55);
-            let randomLux = Math.floor(Math.random() * (1500 - 800) + 800);
-
-            document.getElementById('val-suhu').innerText = randomSuhu;
-            document.getElementById('val-hum').innerText = randomHum;
-            document.getElementById('val-lux').innerText = randomLux;
-
-            sensorChart.data.datasets[0].data.shift(); 
-            sensorChart.data.datasets[1].data.shift();
-            sensorChart.data.datasets[0].data.push(randomSuhu);
-            sensorChart.data.datasets[1].data.push(randomHum);
-            sensorChart.update();
-
-        }, 2000);
+        //UPDATE FIREBASE PAKE ASYNC
+        async function updateSensorDataFromFirebase() {
+            try {
+                const response = await fetch('{{ route("api.sensor.current") }}');
+                const result = await response.json();
+                
+                if (result.success && result.data) {
+                    const sensorData = result.data;
+                    document.getElementById('val-suhu').innerText = sensorData.suhu || 0;
+                    document.getElementById('val-hum').innerText = sensorData.kelembaban || 0;
+                    document.getElementById('val-lux').innerText = sensorData.cahaya || 0;
+                    if (sensorChart) {
+                        sensorChart.data.datasets[0].data.shift(); 
+                        sensorChart.data.datasets[1].data.shift();
+                        sensorChart.data.datasets[0].data.push(sensorData.suhu || 0);
+                        sensorChart.data.datasets[1].data.push(sensorData.kelembaban || 0);
+                        sensorChart.update();
+                    }
+                    updateStatusIndicator(sensorData.status || 'Normal');
+                }
+            } catch (error) {
+                console.error('Error updating sensor data:', error);
+            }
+        }
+        
+        function updateStatusIndicator(status) {
+            const statusElement = document.querySelector('.text-green-600');
+            if (statusElement) {
+                const statusText = status === 'Normal' ? 'ONLINE • STABIL' : 'ONLINE • WARNING';
+                statusElement.textContent = statusText;
+                if (status !== 'Normal') {
+                    statusElement.classList.remove('text-green-600');
+                    statusElement.classList.add('text-yellow-600');
+                } else {
+                    statusElement.classList.remove('text-yellow-600');
+                    statusElement.classList.add('text-green-600');
+                }
+            }
+        }
+        
+        //MENARIK GENERATE SENSOR AMBIL DATA DARI API
+        async function generateSensorData() {
+            try {
+                const response = await fetch('{{ route("api.sensor.generate") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    }
+                });
+                const result = await response.json();
+                console.log('Sensor data generated:', result);
+                updateSensorDataFromFirebase();
+            } catch (error) {
+                console.error('Error generating sensor data:', error);
+            }
+        }
+        
+        setInterval(updateSensorDataFromFirebase, 2000);
+        setInterval(generateSensorData, 10000);
+        updateSensorDataFromFirebase();
+        generateSensorData();
     </script>
 </x-app-layout>
