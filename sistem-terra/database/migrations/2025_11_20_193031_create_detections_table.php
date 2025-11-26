@@ -12,12 +12,18 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('detections', function (Blueprint $table) {
-        $table->id();
-        $table->foreignId('user_id')->constrained()->onDelete('cascade'); // Petani siapa
-        $table->string('label'); // Sehat/Bercak/Layu
-        $table->integer('confidence'); // Persentase keyakinan
-        $table->string('image_snapshot')->nullable(); // Foto saat kejadian (optional)
-        $table->timestamps();
+            $table->id();
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->string('label');
+            $table->string('dominan_disease')->nullable();
+            $table->integer('confidence'); 
+            $table->decimal('dominan_confidence_avg', 5, 4)->nullable();
+            $table->json('jumlah_disease_terdeteksi')->nullable(); 
+            $table->json('sensor_rata_rata')->nullable(); 
+            $table->string('status')->nullable(); 
+            $table->string('image_snapshot')->nullable(); 
+            $table->json('info')->nullable(); 
+            $table->timestamps();
         });
     }
 

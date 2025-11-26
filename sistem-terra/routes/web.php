@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\MarketplaceController;
 use App\Http\Controllers\ForumController;
 use App\Http\Controllers\HistoryController;
+use App\Services\FirebaseService;
 
 Route::get('/', function () {
     return view('welcome');
@@ -14,6 +15,21 @@ Route::get('/dashboard', function () {
     return view('dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
+Route::get('/test-firebase', function() {
+    try {
+        $firebase = new FirebaseService();
+        $result = $firebase->saveDetection('test_user', [
+            'label' => 'test',
+            'dominan_disease' => 'test_disease',
+            'confidence' => 0.95,
+            'dominan_confidence_avg' => 0.95,
+            'status' => 'sehat'
+        ]);
+        return response()->json(['status' => 'success', 'data' => $result]);
+    } catch (\Exception $e) {
+        return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+    }
+});
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::get('/marketplace', [MarketplaceController::class, 'index'])->name('marketplace');
@@ -32,12 +48,24 @@ Route::middleware('auth')->group(function () {
     Route::delete('/forum/delete/{postId}', [ForumController::class, 'deletePost'])->name('forum.delete');
     Route::get('/history', [HistoryController::class, 'index'])->name('history');
     Route::post('/history/detection', [HistoryController::class, 'storeDetection'])->name('history.store_detection');
+    Route::get('/history/refresh', [HistoryController::class, 'refresh'])->name('history.refresh');
+    Route::get('/api/detections', [HistoryController::class, 'getDetections'])->name('api.detections');
     Route::post('/history/click', [HistoryController::class, 'trackClick'])->name('history.track_click');
     Route::get('/history/export', [HistoryController::class, 'export'])->name('history.export');
+    Route::delete('/history/{id}', [HistoryController::class, 'destroy'])->name('history.destroy');
     Route::get('/api/product-recommendation', [App\Http\Controllers\MarketplaceController::class, 'getRecommendation']);
-    Route::get('/marketplace/{id}/edit', [MarketplaceController::class, 'edit'])->name('marketplace.edit');
-    Route::put('/marketplace/{id}', [MarketplaceController::class, 'update'])->name('marketplace.update');
-});
+    
+    });
+
+
+// Sensor API Routes (no auth required)
+Route::get('/api/sensor/current', [App\Http\Controllers\SensorApiController::class, 'getCurrent'])->name('api.sensor.current');
+Route::get('/api/sensor/history', [App\Http\Controllers\SensorApiController::class, 'getHistory']);
+Route::post('/api/sensor/generate', [App\Http\Controllers\SensorApiController::class, 'generateAndSave'])->name('api.sensor.generate')->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
+Route::get('/api/sensor/firebase', [App\Http\Controllers\SensorApiController::class, 'getFromFirebase']);
+    
+// Sensor untuk Detections
+Route::post('/api/sensor/auto-update-detections', [App\Http\Controllers\SensorApiController::class, 'autoUpdateDetections'])->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
 
 // GROUP TEKNISI (MANAJEMEN USER)
 Route::middleware(['auth'])->group(function () {
