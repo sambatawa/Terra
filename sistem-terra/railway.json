@@ -1,8 +1,6 @@
 {
   "build": {
-    "builder": "NIXPACKS",
-    "buildCommand": "cd sistem-terra && npm install && npm run build",
-    "installCommand": "cd sistem-terra && composer install && npm install"
+    "builder": "NIXPACKS"
   },
   "deploy": {
     "startCommand": "cd sistem-terra && chmod +x start.sh && ./start.sh",
