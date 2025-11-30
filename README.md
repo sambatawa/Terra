@@ -1,5 +1,5 @@
 <div align="center">
-   <img src="https://raw.githubusercontent.com/sambatawa/Terra-Sm5Pro/main/sistem-terra/public/img/logo.png" alt="Terra Ecosystem" width="200">
+   <img src="https://raw.github.com/sambatawa/Terra-Sm5Pro/main/sistem-terra/public/img/logo.png" alt="Terra Ecosystem" width="400">
   <h1>Terra</h1>
   <p><strong>Monitoring dan AI Detection Disease menggunakan Eggplant Leaf</strong></p>
   
@@ -8,7 +8,6 @@
   [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.x-38B2AC.svg?style=flat&logo=Tailwind-CSS)](https://tailwindcss.com)
   [![Firebase](https://img.shields.io/badge/Firebase-Realtime%20Database-FFCA28.svg?style=flat&logo=Firebase)](https://firebase.google.com)
   [![ONNX](https://img.shields.io/badge/ONNX-Runtime-005CED.svg?style=flat&logo=ONNX)](https://onnx.ai)
-  [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 </div>
 
 ## Tentang Proyek
@@ -61,7 +60,6 @@ Terra-Sm5Pro/
 - **Real-time Dashboard**: Live data streaming setiap 2 detik
 - **Alert System**: Notifikasi untuk threshold violations
 - **Geolocation Integration**: GPS tracking dengan Google Maps
-- **Data Export**: PDF reporting untuk analisis
 
 ### Digital Marketplace
 - **Product Management**: Upload, edit, hapus produk pertanian
@@ -77,38 +75,6 @@ Terra-Sm5Pro/
 - **Expert Badges**: Verification system untuk ahli pertanian
 - **Search & Filter**: Advanced content discovery
 
-## Tech Stack
-
-### Frontend Stack
-```yaml
-Framework: Laravel 12.0
-Language: PHP 8.2+
-Styling: TailwindCSS 3.x
-JavaScript: Alpine.js + Vanilla JS
-Build Tool: Vite 7.0
-AI/ML: ONNX Runtime Web
-Real-time: Firebase SDK
-Authentication: Laravel Breeze
-PDF: DomPDF
-```
-
-### Backend Stack
-```yaml
-Framework: FastAPI 0.104+
-Language: Python 3.11+
-AI/ML: PyTorch, ONNX, OpenCV
-Database: Firebase Realtime Database
-Documentation: OpenAPI/Swagger
-Async: asyncio support
-```
-
-### Infrastructure
-```yaml
-Web Server: Apache/Nginx
-Database: MySQL 8.0+
-Cache: Redis/File Storage
-Real-time: Firebase Realtime Database
-```
 
 ## 📦 Instalasi & Setup
 
@@ -291,7 +257,6 @@ npm audit
 ```
 <div align="center">
   <p><strong>Memberdayakan Pertanian Terung Ungu dengan Teknologi</strong></p>
-  <p>© 2025 Terra (AI DETECTIONS EGGPLANT LEAF). Semua hak dilindungi.</p>
   
   <p>
     <a href="#top">Kembali ke Atas</a> •
