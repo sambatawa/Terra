@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
-        <h2 class="font-semibold text-xl text-gray-800"><i class="fa-solid fa-exclamation-triangle text-red-600 mr-2"></i> Laporan Masalah Saya</h2>
+        <h2 class="font-semibold text-xl text-gray-800"> Laporan Masalah Saya</h2>
     </x-slot>
 
     <div class="py-12" x-data="{ openModal: false }">

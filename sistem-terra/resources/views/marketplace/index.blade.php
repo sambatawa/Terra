@@ -8,7 +8,7 @@
         </h2>
     </x-slot>
 
-    <div class="py-12 bg-[#F3F0FF]">
+    <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
 
             @if(session('success'))
@@ -18,8 +18,8 @@
             @endif
 
             @if(Auth::user()->role == 'penjual')
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6 mb-8 border-l-4 border-blue-500">
-                <h3 class="font-bold text-lg mb-4">➕ Jual Produk Baru</h3>
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6 mb-8 border-l-4 border-purple-500">
+                <h3 class="font-bold text-lg mb-4"><i class="fas fa-plus-circle mr-2"></i> Jual Produk Baru</h3>
                 <form action="{{ route('marketplace.store') }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -30,12 +30,12 @@
                         <div>
                             <label class="block text-sm text-gray-600">Kategori Produk <span class="text-red-500">*</span></label>
                             <select name="category" required class="w-full border-gray-300 rounded mt-1">
-                                <option value="">-- Pilih Kategori --</option>
-                                <option value="pupuk_nutrisi">🧪 Pupuk & Nutrisi Tanaman</option>
-                                <option value="pestisida_obat">🛡️ Pestisida & Obat Tanaman</option>
-                                <option value="benih_bibit">🌱 Benih & Bibit Unggul</option>
-                                <option value="alat_tani">🔧 Alat Pertanian</option>
-                                <option value="sarana_produksi">🏪 Sarana Produksi</option>
+                                <option value="">Pilih Kategori</option>
+                                <option value="pupuk_nutrisi"><i class="fas fa-flask"></i> Pupuk dan Nutrisi Tanaman</option>
+                                <option value="pestisida_obat"><i class="fas fa-shield-alt"></i> Pestisida dan Obat Tanaman</option>
+                                <option value="benih_bibit"><i class="fas fa-seedling"></i> Benih dan Bibit Unggul</option>
+                                <option value="alat_tani"><i class="fas fa-tools"></i> Alat Pertanian</option>
+                                <option value="sarana_produksi"><i class="fas fa-warehouse"></i> Sarana Produksi</option>
                             </select>
                         </div>
                         <div class="grid grid-cols-2 gap-4">
@@ -45,7 +45,7 @@
                             </div>
                             <div>
                                 <label class="block text-sm text-gray-600">Stok Awal</label>
-                                <input type="number" name="stock" value="10" required class="w-full border-gray-300 rounded mt-1 bg-yellow-50">
+                                <input type="number" name="stock" value="10" required class="w-full border-gray-300 rounded mt-1 bg-gray-50">
                             </div>
                         </div>
                         <div>
@@ -61,16 +61,14 @@
                             <textarea name="description" class="w-full border-gray-300 rounded mt-1"></textarea>
                         </div>
                     </div>
-                    <button type="submit" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Jual Sekarang</button>
+                    <button type="submit" class="mt-4 bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">Jual Sekarang</button>
                 </form>
             </div>
             @endif
 
-            <!-- Filter & Search Section -->
             <form id="filterForm" method="GET" action="{{ route('marketplace') }}" class="mb-8">
                 <div class="bg-white rounded-xl shadow-sm p-6">
                     <div class="flex flex-col lg:flex-row gap-4">
-                        <!-- Search -->
                         <div class="flex-1">
                             <div class="relative">
                                 <input type="text" 
@@ -84,7 +82,6 @@
                             </div>
                         </div>
                         
-                        <!-- Category Filter -->
                         <div class="lg:w-64">
                             <select name="category" 
                                     class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
@@ -97,9 +94,8 @@
                             </select>
                         </div>
                         
-                        <!-- Stock Filter -->
                         <div class="flex items-center">
-                            <label class="flex items-center cursor-pointer">
+                            <label class="flex items-center cursor-pointer gap-2">
                                 <input type="checkbox" 
                                        name="in_stock" 
                                        value="1" 
@@ -109,18 +105,15 @@
                             </label>
                         </div>
                         
-                        <!-- Search Button -->
                         <div>
-                            <button type="submit" 
-                                    class="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition duration-200 font-medium">
-                                <i class="fa-solid fa-filter mr-2"></i>Filter
+                            <button type="submit" class="px-6 py-3 bg-purple-600 gap-2 flex items-center text-white rounded-lg hover:bg-purple-700 transition duration-200 font-medium">
+                                <i class="fa-solid fa-filter"></i>Filter
                             </button>
                         </div>
                     </div>
                 </div>
             </form>
 
-            <!-- Category Overview Cards -->
             <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
                 <div class="bg-white rounded-lg p-4 text-center hover:shadow-md transition duration-200 cursor-pointer category-card" data-category="pupuk_nutrisi">
                     <div class="w-12 h-12 mx-auto mb-2 rounded-full flex items-center justify-center bg-green-100 text-green-600">
@@ -162,10 +155,7 @@
             <h3 class="font-bold text-xl mb-4 text-gray-700">Etalase Produk</h3>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 @foreach($products as $product)
-                
                 <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg relative transition hover:shadow-xl {{ $product->stock == 0 ? 'opacity-75 grayscale' : '' }}">
-                    
-                    <!-- Category Badge -->
                     <div class="absolute top-2 left-2 z-10">
                         <div class="px-2 py-1 rounded-full text-xs font-medium text-white flex items-center gap-1 shadow-lg"
                              style="background-color: {{ $product->getCategoryColor() }}">
@@ -173,8 +163,6 @@
                             {{ $product->getCategoryName() }}
                         </div>
                     </div>
-                    
-                    <!-- Stock Status Badge -->
                     <div class="absolute top-2 right-2 z-10">
                         @if($product->stock == 0)
                             <span class="bg-red-600 text-white text-xs font-bold px-2 py-1 rounded shadow-lg">❌ Habis</span>
@@ -189,14 +177,11 @@
                             </span>
                         @endif
                     </div>
-
                     <img src="{{ asset($product->image) }}" alt="{{ $product->name }}" class="w-full h-48 object-cover">
-                    
                     <div class="p-6">
                         <h3 class="font-bold text-lg mb-2">{{ $product->name }}</h3>
                         <p class="text-xs text-gray-500 italic mb-2">{{ $product->getCategoryDescription() }}</p>
                         <p class="text-green-600 font-bold text-xl">{{ $product->getFormattedPrice() }}</p>
-                        
                         @if(Auth::user()->role == 'penjual' && Auth::id() == $product->user_id)
                             <div class="mt-4 bg-gray-100 p-3 rounded border border-gray-200">
                                 <div class="flex items-center justify-between mb-3 border-b border-gray-300 pb-2">

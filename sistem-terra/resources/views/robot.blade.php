@@ -17,7 +17,7 @@
         </div>
     </x-slot>
 
-    <div class="py-8 bg-[#F3F0FF] min-h-screen"> <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+    <div class="py-8 min-h-screen"> <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <div class="lg:col-span-8 space-y-6">
                     <div class="relative bg-black rounded-3xl overflow-hidden shadow-2xl border-4 border-purple-900 group">
@@ -47,7 +47,7 @@
                             <div class="bg-white border-2 border-purple-500 text-gray-800 p-4 rounded-2xl shadow-2xl max-w-xs flex gap-4 items-center">
                                 <img id="rec-image" src="" class="w-14 h-14 object-cover rounded-lg border border-gray-200">
                                 <div>
-                                    <p class="text-[10px] font-extrabold text-purple-600 uppercase tracking-wider animate-pulse">⚠️ PENYAKIT TERDETEKSI</p>
+                                    <p class="text-[10px] font-extrabold text-purple-600 uppercase tracking-wider animate-pulse"><i class="fas fa-exclamation-triangle mr-1"></i> PENYAKIT TERDETEKSI</p>
                                     <h4 id="rec-name" class="font-bold text-sm text-gray-900 truncate w-32 mt-0.5">Nama Produk</h4>
                                     <p class="text-xs text-gray-500 font-medium">Rp <span id="rec-price">0</span></p>
                                     <a id="rec-link" href="#" target="_blank" class="mt-2 inline-flex items-center bg-purple-600 hover:bg-purple-700 text-white text-[10px] font-bold px-3 py-1.5 rounded-full transition">

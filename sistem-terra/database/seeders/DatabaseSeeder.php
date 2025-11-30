@@ -18,7 +18,7 @@ class DatabaseSeeder extends Seeder
         // Buat Akun Teknisi Otomatis
         \App\Models\User::create([
             'name' => 'Master Teknisi',
-            'email' => 'inassaqi@gmail.com',
+            'email' => 'inassamara07@gmail.com',
             'password' => bcrypt('12345678'), 
             'role' => 'teknisi',
         ]);

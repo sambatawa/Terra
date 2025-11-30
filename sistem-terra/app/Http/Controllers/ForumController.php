@@ -10,17 +10,25 @@ use Illuminate\Support\Facades\Auth;
 
 class ForumController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        // Ambil semua post, urutkan terbaru, serta ambil data user, komen, dan like-nya
-        $posts = Post::with(['user', 'comments.user', 'likes'])->latest()->get();
+        $query = Post::with(['user', 'comments.user', 'likes'])->latest();
+        
+        // Filter by kategori
+        if ($request->has('category') && $request->category != 'all') {
+            $query->where('category', $request->category);
+        }
+        
+        $posts = $query->get();
         return view('forum', compact('posts'));
     }
 
     public function storePost(Request $request)
     {
         $request->validate([
+            'title' => 'required|max:200',
             'content' => 'required',
+            'category' => 'required|in:pupuk_nutrisi,pestisida_obat,benih_bibit,alat_tani,sarana_produksi,umum',
             'image' => 'image|mimes:jpeg,png,jpg|max:2048'
         ]);
 
@@ -31,11 +39,13 @@ class ForumController extends Controller
 
         Post::create([
             'user_id' => Auth::id(),
+            'title' => $request->title,
             'content' => $request->content,
+            'category' => $request->category,
             'image' => $imagePath
         ]);
 
-        return back()->with('success', 'Status berhasil diposting!');
+        return back()->with('success', 'Diskusi berhasil diposting!');
     }
 
     public function storeComment(Request $request, $postId)

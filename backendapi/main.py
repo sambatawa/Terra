@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException, BackgroundTasks
+from fastapi import FastAPI, File, UploadFile, HTTPException, BackgroundTasks, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -476,7 +476,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",           # Vite local
         "http://localhost:8000",           # Laravel local
-        "https://terra.onrender.com"       # Production
+        "http://127.0.0.1:8000",          # Laravel local (127.0.0.1)
+        "https://*.railway.app"           # All Railway domains
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE"],

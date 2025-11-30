@@ -46,13 +46,13 @@
                         <form action="{{ route('chat.kirim', $rpt->id) }}" method="POST" class="flex-1 flex gap-2">
                             @csrf
                             <input type="text" name="message" class="w-full border rounded p-2" required>
-                            <button class="bg-blue-600 text-white px-4 py-2 rounded">➤ Kirim</button>
+                            <button class="bg-purple-600 text-white px-6 py-2 rounded hover:bg-purple-700 text-sm font-bold"><i class="fas fa-paper-plane mr-2"></i>Kirim</button>
                         </form>
 
                         <form action="{{ route('chat.selesai', $rpt->id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin masalah ini sudah selesai? Tiket akan ditutup.');">
                             @csrf 
                             @method('PUT') 
-                            <button class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-sm font-bold">✅ Selesai</button>
+                            <button class="bg-green-600 text-white px-6 py-2.5  rounded hover:bg-green-700 text-sm font-bold">Selesai</button>
                         </form>
 
                     </div>

@@ -53,7 +53,7 @@ class MarketplaceController extends Controller
             'category' => $request->category,
             'description' => $request->description ?? 'Tidak ada deskripsi',
             'price' => $request->price,
-            'stock' => $request->stock, // Simpan Stok
+            'stock' => $request->stock,
             'whatsapp_number' => $request->whatsapp_number,
             'image' => $imagePath,
         ]);
@@ -65,8 +65,6 @@ class MarketplaceController extends Controller
     public function updateStock(Request $request, $id)
     {
         $product = Product::findOrFail($id);
-        
-        // Pastikan yang ubah adalah pemilik
         if($product->user_id != Auth::id()) {
             abort(403);
         }
@@ -89,16 +87,13 @@ class MarketplaceController extends Controller
         }
         return abort(403);
     }
-    // API: Rekomendasi Produk Berdasarkan Penyakit AI
+    //Rekomendasi Produk Berdasarkan Penyakit AI
     public function getRecommendation(Request $request)
     {
-        $keyword = $request->query('label'); // Contoh: "Bercak"
-        
-        // Cari produk yang namanya atau deskripsinya mengandung kata kunci
-        // Kita ambil 1 produk terbaik (paling mahal/paling atas)
+        $keyword = $request->query('label');
         $product = Product::where('name', 'LIKE', "%{$keyword}%")
                           ->orWhere('description', 'LIKE', "%{$keyword}%")
-                          ->orWhere('name', 'LIKE', '%Obat%') // Fallback kalau gak ketemu
+                          ->orWhere('name', 'LIKE', '%Obat%')
                           ->latest()
                           ->first();
 
@@ -114,25 +109,20 @@ class MarketplaceController extends Controller
 
         return response()->json(['found' => false]);
     }
-    // FUNGSI 1: TAMPILKAN HALAMAN EDIT
+    //TAMPILKAN HALAMAN EDIT
     public function edit($id)
     {
         $product = Product::findOrFail($id);
-
-        // Keamanan: Cek apakah user ini pemilik produk?
         if($product->user_id != Auth::id()){
-            abort(403); // Dilarang masuk
+            abort(403);
         }
-
         return view('marketplace.edit', compact('product'));
     }
 
-    // FUNGSI 2: SIMPAN PERUBAHAN
+    //SIMPAN PERUBAHAN
     public function update(Request $request, $id)
     {
         $product = Product::findOrFail($id);
-
-        // Keamanan lagi
         if($product->user_id != Auth::id()){
             abort(403);
         }
@@ -142,23 +132,19 @@ class MarketplaceController extends Controller
             'price' => 'required|numeric',
             'stock' => 'required|integer',
             'whatsapp_number' => 'required',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048', // Image boleh kosong kalau gak mau ganti
+            'image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
         ]);
 
-        // Logika Ganti Gambar
-        $imagePath = $product->image; // Pakai gambar lama dulu
-        
+        $imagePath = $product->image;
         if ($request->hasFile('image')) {
-            // Kalau user upload gambar baru
-            // 1. Hapus gambar lama (opsional, biar hemat storage)
+            //GAMBAR BARU AUTO BUANG GAMBAR LAMA
             if($product->image && \Illuminate\Support\Facades\Storage::disk('public')->exists($product->image)){
                 \Illuminate\Support\Facades\Storage::disk('public')->delete($product->image);
             }
-            // 2. Simpan gambar baru
             $imagePath = $request->file('image')->store('products', 'public');
         }
 
-        // Update Database
+        //Update Database
         $product->update([
             'name' => $request->name,
             'description' => $request->description,

@@ -150,7 +150,7 @@
                 <div class="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-white">
                     <h3 class="font-bold text-gray-800 flex items-center gap-2">
                         <span class="bg-yellow-100 p-1.5 rounded-lg text-yellow-600">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <i class="fas fa-clock"></i>
                         </span>
                         Riwayat Peringatan (Alert Log)
                     </h3>
@@ -216,7 +216,7 @@
                     {
                         label: 'Kelembaban (%)',
                         data: [55, 56, 58, 60, 59, 60, 62, 61, 60, 59],
-                        borderColor: '#3B82F6', // Blue
+                        borderColor: '#3B82F6', 
                         backgroundColor: 'rgba(59, 130, 246, 0.1)',
                         tension: 0.4,
                         fill: true,
@@ -226,7 +226,7 @@
                     {
                         label: 'Cahaya (Lux)',
                         data: [800, 850, 900, 950, 1000, 1050, 1100, 1150, 1200, 1250],
-                        borderColor: '#F59E0B', // Orange
+                        borderColor: '#F59E0B', 
                         backgroundColor: 'rgba(245, 158, 11, 0.1)',
                         tension: 0.4,
                         fill: true,
