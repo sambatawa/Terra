@@ -82,7 +82,7 @@ class FirebaseService
             if ($randomSuhu > 30.5) {
                 $statusSensor = 'Warning - Suhu Tinggi';
             } elseif ($randomHum < 57) {
-                $statusSensor = 'Warning - Kelembaban Rendah';
+                $statusSensor = 'Warning - Kelembapan Rendah';
             } elseif ($randomLux > 1400) {
                 $statusSensor = 'Warning - Cahaya Tinggi';
             }

@@ -30,10 +30,12 @@ Route::get('/test-firebase', function() {
         return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
     }
 });
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::get('/marketplace', [MarketplaceController::class, 'index'])->name('marketplace');
     Route::post('/marketplace', [MarketplaceController::class, 'store'])->name('marketplace.store');
+    Route::get('/marketplace/{id}/edit', [MarketplaceController::class, 'edit'])->name('marketplace.edit');
+    Route::put('/marketplace/{id}', [MarketplaceController::class, 'update'])->name('marketplace.update');
     Route::post('/marketplace/stock/{id}', [MarketplaceController::class, 'updateStock'])->name('marketplace.stock');
     Route::delete('/marketplace/{id}', [MarketplaceController::class, 'destroy'])->name('marketplace.destroy');
     Route::view('/forum', 'forum')->name('forum');
@@ -54,7 +56,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/history/export', [HistoryController::class, 'export'])->name('history.export');
     Route::delete('/history/{id}', [HistoryController::class, 'destroy'])->name('history.destroy');
     Route::get('/api/product-recommendation', [App\Http\Controllers\MarketplaceController::class, 'getRecommendation']);
-    
     });
 
 
@@ -67,24 +68,24 @@ Route::get('/api/sensor/firebase', [App\Http\Controllers\SensorApiController::cl
 // Sensor untuk Detections
 Route::post('/api/sensor/auto-update-detections', [App\Http\Controllers\SensorApiController::class, 'autoUpdateDetections'])->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
 
+// Tooltip API Routes
+Route::get('/api/tooltip', [App\Http\Controllers\TooltipApiController::class, 'getTooltips'])->name('api.tooltip');
+
 // GROUP TEKNISI (MANAJEMEN USER)
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/admin/users', [App\Http\Controllers\AdminController::class, 'index'])->name('admin.users');
     Route::delete('/admin/users/{id}', [App\Http\Controllers\AdminController::class, 'destroy'])->name('admin.users.delete');
 });
 
 // GROUP LAPORAN (PETANI & TEKNISI)
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/laporan', [App\Http\Controllers\ReportController::class, 'index'])->name('reports.index');
     Route::post('/laporan', [App\Http\Controllers\ReportController::class, 'store'])->name('reports.store');
     Route::put('/laporan/{id}', [App\Http\Controllers\ReportController::class, 'reply'])->name('reports.reply');
 });
 
 Route::middleware(['auth'])->group(function () {
-    // Halaman Utama
     Route::get('/laporan', [App\Http\Controllers\ReportController::class, 'index'])->name('reports.index');
-    
-    // Buat Laporan Baru
     Route::post('/laporan', [App\Http\Controllers\ReportController::class, 'store'])->name('reports.store');
     
     // --- JALUR KHUSUS CHAT (Biar Gak Bentrok) ---
@@ -94,6 +95,18 @@ Route::middleware(['auth'])->group(function () {
     
     // 2. Selesaikan Masalah (PUT)
     Route::put('/chat/selesai/{id}', [App\Http\Controllers\ReportController::class, 'resolve'])->name('chat.selesai');
+});
+
+// Email Verification Routes
+Route::middleware('auth')->group(function () {
+    Route::get('/email/verify', [App\Http\Controllers\Auth\EmailVerificationPromptController::class, '__invoke'])
+        ->name('verification.notice');
+    Route::get('/email/verify/{id}/{hash}', [App\Http\Controllers\Auth\VerifyEmailController::class, '__invoke'])
+        ->middleware(['signed', 'throttle:6,1'])
+        ->name('verification.verify');
+    Route::post('/email/verification-notification', [App\Http\Controllers\Auth\EmailVerificationNotificationController::class, 'store'])
+        ->middleware(['throttle:6,1'])
+        ->name('verification.send');
 });
 
 require __DIR__.'/auth.php';

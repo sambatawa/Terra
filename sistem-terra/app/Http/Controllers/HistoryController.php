@@ -27,10 +27,11 @@ class HistoryController extends Controller
             $firebaseDetections = [];
             try {
                 $firebaseService = new FirebaseService();
-                $autoSimpanData = $firebaseService->getDetections('autoSimpan', 100);
-                $userData = $firebaseService->getDetections($user->id, 50);
-                $manualData = $firebaseService->getDetections('manual_user', 50);
-                $allFirebaseData = array_merge($autoSimpanData, $userData, $manualData);
+                // Auto save sekarang menggunakan user ID yang login
+                $userData = $firebaseService->getDetections($user->id, null); // Ambil semua data
+                $manualData = $firebaseService->getDetections('manual_user', null); // Ambil semua data
+                $autoSimpanData = $firebaseService->getDetections('autoSimpan', 100); // Ambil 100 data terbaru
+                $allFirebaseData = array_merge($userData, $manualData, $autoSimpanData);
                 //sorting dengan timestamp terbaru
                 usort($allFirebaseData, function($a, $b) {
                     $timeA = isset($a['timestamp']) ? (int)$a['timestamp'] : 0;
@@ -47,19 +48,6 @@ class HistoryController extends Controller
                     'manual_count' => count($manualData),
                     'total_count' => count($allFirebaseData)
                 ]);
-                
-                // Debug: Log sample data dari autoSimpan
-                if (!empty($autoSimpanData)) {
-                    Log::info('Sample autoSimpan data:', [
-                        'first_item' => $autoSimpanData[0],
-                        'total_items' => count($autoSimpanData)
-                    ]);
-                } else {
-                    Log::warning('autoSimpan data bisa', [
-                        'autoSimpanData_type' => gettype($autoSimpanData),
-                        'autoSimpanData_value' => $autoSimpanData
-                    ]);
-                }    
             } catch (\Exception $e) {
                 Log::error('Firebase error: ' . $e->getMessage());
                 $firebaseDetections = Detection::where('user_id', $user->id)->latest()->get();
@@ -75,14 +63,14 @@ class HistoryController extends Controller
                 if ($suhu > 30.5) {
                     $status = 'Warning - Suhu Tinggi';
                 } elseif ($hum < 57) {
-                    $status = 'Warning - Kelembaban Rendah';
+                    $status = 'Warning - Kelembapan Rendah';
                 } elseif ($lux > 1400) {
                     $status = 'Warning - Cahaya Tinggi';
                 }
                 return [
                     'time' => $time,
                     'suhu' => $suhu,
-                    'kelembaban' => $hum,
+                    'kelembapan' => $hum,
                     'cahaya' => $lux,
                     'status' => $status
                 ];
@@ -114,61 +102,120 @@ class HistoryController extends Controller
         return view('history.index', compact('data', 'role'));
     }
 
-    // FUNGSI EXPORT CSV (UPDATE JUGA BIAR PENYULUH BISA DOWNLOAD)
+    // FUNGSI EXPORT PDF (UPDATE JUGA BIAR PENYULUH BISA DOWNLOAD)
     public function export()
     {
         $user = Auth::user();
         $role = $user->role;
-        $fileName = 'Laporan-Terra-' . ucfirst($role) . '-' . date('Y-m-d') . '.csv';
+        $fileName = 'Laporan-Terra-' . ucfirst($role) . '-' . date('Y-m-d') . '.pdf';
 
         $headers = [
-            "Content-type"        => "text/csv",
+            "Content-type"        => "application/pdf",
             "Content-Disposition" => "attachment; filename=$fileName",
             "Pragma"              => "no-cache",
             "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
             "Expires"             => "0"
         ];
-
-        $columns = [];
-        $query = [];
+        $processedData = [];
 
         if ($role == 'petani' || $role == 'teknisi') {
-            $columns = ['Waktu', 'Hasil Deteksi', 'Confidence', 'Status'];
-            $query = Detection::where('user_id', $user->id)->latest()->get();
-        } elseif ($role == 'penjual') {
-            $columns = ['Waktu', 'Nama Produk', 'Ket'];
-            $query = ProductClick::where('seller_id', $user->id)->latest()->get();
-        } elseif ($role == 'penyuluh') {
-            $columns = ['Tanggal Post', 'Isi Konten', 'Jumlah Like', 'Jumlah Komentar'];
-            $query = Post::where('user_id', $user->id)->withCount('comments', 'likes')->latest()->get();
-        }
+            try {
+                $firebaseService = new FirebaseService();
+                $userData = $firebaseService->getDetections($user->id, null);
+                $manualData = $firebaseService->getDetections('manual_user', null);
+                $autoSimpanData = $firebaseService->getDetections('autoSimpan', 100);
+                $allFirebaseData = array_merge($userData, $manualData, $autoSimpanData);
+                // Sorting seperti di index
+                usort($allFirebaseData, function($a, $b) {
+                    $timeA = isset($a['timestamp']) ? (int)$a['timestamp'] : 0;
+                    $timeB = isset($b['timestamp']) ? (int)$b['timestamp'] : 0;
+                    return $timeB - $timeA;
+                });
+                
+                foreach ($allFirebaseData as $row) {
+                    $timestamp = isset($row['timestamp']) ? 
+                        \Carbon\Carbon::createFromTimestamp($row['timestamp']) : 
+                        (isset($row['created_at']) ? $row['created_at'] : now());
+                    
+                    $detection = $row['dominan_disease'] ?? $row['label'] ?? 'Tidak Dikenali';
+                    $confidence = $row['dominan_confidence_avg'] ?? $row['confidence'] ?? 0;
+                    if ($confidence < 1) $confidence = $confidence * 100;
+                    $sensorDataArray = $row['sensor_data'] ?? $row['sensor_rata_rata'] ?? $row->{'sensor_rata-rata'} ?? [];
+                    if (is_string($sensorDataArray)) {
+                        $sensorDataArray = json_decode($sensorDataArray, true) ?? [];
+                    }
+                    $suhu = $sensorDataArray['suhu'] ?? $row['suhu'] ?? 'N/A';
+                    $kelembapan = $sensorDataArray['kelembapan'] ?? $row['kelembapan'] ?? 'N/A';
+                    $cahaya = $sensorDataArray['cahaya'] ?? $row['cahaya'] ?? 'N/A';
 
-        $callback = function() use ($query, $columns, $role) {
-            $file = fopen('php://output', 'w');
-            fputcsv($file, $columns);
-
-            foreach ($query as $row) {
-                $dataRow = [];
-                if ($role == 'petani' || $role == 'teknisi') {
-                    $dataRow = [$row->created_at, $row->label, $row->confidence . '%', 'Recorded'];
-                } elseif ($role == 'penjual') {
-                    $dataRow = [$row->created_at, $row->product_name, 'User Click WA'];
-                } elseif ($role == 'penyuluh') { // DATA CSV PENYULUH
-                    $dataRow = [
-                        $row->created_at->format('Y-m-d H:i'),
-                        substr($row->content, 0, 50) . '...', // Potong teks biar rapi
-                        $row->likes_count,
-                        $row->comments_count
+                    $info = $row['info'] ?? [];
+                    $ciri = $info['ciri'] ?? 'Tidak ada informasi';
+                    $rekomendasi = $info['rekomendasi_penanganan'] ?? 'Tidak ada rekomendasi';
+                    $isHealthy = (strtolower($detection) === 'sehat') || 
+                                (isset($row['status']) && strtolower($row['status']) === 'sehat');
+                    $statusText = $isHealthy ? 'Aman' : 'Perlu Tindakan';
+                    $processedData[] = [
+                        'waktu' => $timestamp->format('d M Y H:i'),
+                        'detection' => $detection,
+                        'confidence' => number_format($confidence, 1) . '%',
+                        'status' => $statusText,
+                        'suhu' => $suhu . '°C',
+                        'kelembapan' => $kelembapan . '%', 
+                        'cahaya' => $cahaya . ' Lux',
+                        'ciri' => $ciri,
+                        'rekomendasi' => $rekomendasi
                     ];
                 }
-                fputcsv($file, $dataRow);
+            } catch (\Exception $e) {
+                $detections = Detection::where('user_id', $user->id)->latest()->get();
+                foreach ($detections as $row) {
+                    $processedData[] = [
+                        'waktu' => $row->created_at->format('d M Y H:i'),
+                        'detection' => $row->label ?? 'Tidak Dikenali',
+                        'confidence' => number_format($row->confidence, 1) . '%',
+                        'status' => 'Recorded',
+                        'suhu' => 'N/A',
+                        'kelembapan' => 'N/A',
+                        'cahaya' => 'N/A',
+                        'ciri' => 'Tidak ada informasi',
+                        'rekomendasi' => 'Tidak ada rekomendasi'
+                    ];
+                }
             }
-            fclose($file);
-        };
-
-        return response()->stream($callback, 200, $headers);
+        } elseif ($role == 'penjual') {
+            $clicks = ProductClick::where('seller_id', $user->id)->latest()->get();
+            foreach ($clicks as $row) {
+                $processedData[] = [
+                    'waktu' => $row->created_at->format('d M Y H:i'),
+                    'product' => $row->product_name ?? 'Unknown',
+                    'action' => 'User Click WA'
+                ];
+            }
+        } elseif ($role == 'penyuluh') {
+            $posts = Post::where('user_id', $user->id)->withCount('comments', 'likes')->latest()->get();
+            foreach ($posts as $row) {
+                $processedData[] = [
+                    'waktu' => $row->created_at->format('d M Y H:i'),
+                    'content' => substr($row->content ?? '', 0, 100) . '...',
+                    'likes' => $row->likes_count ?? 0,
+                    'comments' => $row->comments_count ?? 0
+                ];
+            }
+        }
+        try {
+            $pdf = \Barryvdh\DomPDF\Facade\PDF::loadView('history.export-pdf', [
+                'data' => $processedData,
+                'role' => $role,
+                'user' => $user,
+                'fileName' => $fileName
+            ]);
+            
+            return $pdf->download($fileName);
+        } catch (\Exception $e) {
+            Log::error('PDF generation error: ' . $e->getMessage());
+            return $this->generateCSVFallback($processedData, $role, $user, $fileName);
+        }
     }
-
     //Track Confidence and Label from FastAPI
     public function storeDetection(Request $request) {
         Detection::create(['user_id' => Auth::id(), 'label' => $request->label, 'confidence' => $request->confidence]);
@@ -191,21 +238,17 @@ class HistoryController extends Controller
             $userData = $firebaseService->getDetections($user->id, 50);
             $manualData = $firebaseService->getDetections('manual_user', 50);
             $allFirebaseData = array_merge($autoSimpanData, $userData, $manualData);
-            
-            // Sort berdasarkan timestamp terbaru
             usort($allFirebaseData, function($a, $b) {
                 $timeA = isset($a['timestamp']) ? (int)$a['timestamp'] : 0;
                 $timeB = isset($b['timestamp']) ? (int)$b['timestamp'] : 0;
                 return $timeB - $timeA;
             });
-            
             Log::info('Firebase refresh data loaded', [
                 'autoSimpan_count' => count($autoSimpanData),
                 'user_count' => count($userData),
                 'manual_count' => count($manualData),
                 'total_count' => count($allFirebaseData)
             ]);
-            
             return response()->json([
                 'success' => true,
                 'detections' => $allFirebaseData
@@ -238,7 +281,6 @@ class HistoryController extends Controller
             'image_snapshot' => 'nullable|string'
         ]);
         $userId = $request->user_id ?? 1;
-
         // Simpan detection
         Detection::create([
             'user_id' => $userId,
@@ -287,7 +329,6 @@ class HistoryController extends Controller
                     continue; 
                 }
             }
-
             if (!$deleted) {
                 return response()->json([
                     'success' => false,

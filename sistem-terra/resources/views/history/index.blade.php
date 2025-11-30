@@ -11,7 +11,7 @@
         </div>
     </x-slot>
 
-    <div class="py-12 bg-gray-100 min-h-screen">
+    <div class="py-12 bg-[#F3F0FF] min-h-screen">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
 
             @if($role == 'petani' || $role == 'teknisi')
@@ -65,10 +65,11 @@
                                     if (is_string($sensorData)) {
                                         $sensorData = json_decode($sensorData, true) ?? [];
                                     }
-                                    $suhu = $sensorData['suhu'] ?? 'N/A';
-                                    $kelembapan = $sensorData['kelembapan'] ?? 'N/A';
-                                    $cahaya = $sensorData['cahaya'] ?? 'N/A';
+                                    $suhu = $det->sensor_rata_rata['suhu'] ?? 'N/A';
+                                    $kelembapan = $det->sensor_rata_rata['kelembapan'] ?? 'N/A';
+                                    $cahaya = $det->sensor_rata_rata['cahaya'] ?? 'N/A';
                                     $sensorStatus = $sensorData['status'] ?? 'Normal';
+                                    
                                     
                                     //INFO DATA
                                     $info = $det->info ?? [];
@@ -94,20 +95,16 @@
                                         @endif
                                     </td>
                                     <td class="p-4 text-xs text-gray-600">
-                                        @if($suhu || $kelembapan || $cahaya)
-                                            <div class="space-y-1">
-                                                @if($suhu)<div class="flex items-center gap-1"><span class="text-gray-400">🌡️</span><span>{{ $suhu }}°C</span></div>@endif
-                                                @if($kelembapan)<div class="flex items-center gap-1"><span class="text-gray-400">💧</span><span>{{ $kelembapan }}%</span></div>@endif
-                                                @if($cahaya)<div class="flex items-center gap-1"><span class="text-gray-400">☀️</span><span>{{ $cahaya }} Lux</span></div>@endif
-                                                @if(isset($sensorData['status']) && str_contains($sensorData['status'], 'Warning'))
-                                                    <div class="text-xs font-bold text-yellow-600 bg-yellow-50 px-1.5 py-0.5 rounded mt-1">
-                                                        ⚠️ {{ $sensorData['status'] }}
-                                                    </div>
-                                                @endif
-                                            </div>
-                                        @else
-                                            <span class="text-gray-400">-</span>
-                                        @endif
+                                        <div class="space-y-1">
+                                            <div class="flex items-center gap-1"><span class="text-gray-400">🌡️</span><span>{{ $suhu }}°C</span></div>
+                                            <div class="flex items-center gap-1"><span class="text-gray-400">💧</span><span>{{ $kelembapan }}%</span></div>
+                                            <div class="flex items-center gap-1"><span class="text-gray-400">☀️</span><span>{{ $cahaya }} Lux</span></div>
+                                            @if(isset($sensorData['status']) && str_contains($sensorData['status'], 'Warning'))
+                                                <div class="text-xs font-bold text-yellow-600 bg-yellow-50 px-1.5 py-0.5 rounded mt-1">
+                                                    ⚠️ {{ $sensorData['status'] }}
+                                                </div>
+                                            @endif
+                                        </div>
                                     </td>
                                     <td class="p-4 text-xs text-gray-700 max-w-xs">
                                         <div class="space-y-1">
@@ -157,7 +154,7 @@
                                 <div class="h-2 w-2 rounded-full {{ $sensor['status'] == 'Normal' ? 'bg-green-500' : 'bg-yellow-500' }}"></div>
                                 <div>
                                     <p class="text-sm font-bold text-gray-700">{{ \Carbon\Carbon::parse($sensor['time'])->diffForHumans() }}</p>
-                                    <p class="text-xs text-gray-500">Suhu: {{ $sensor['suhu'] }}°C • Lembab: {{ $sensor['kelembaban'] }}%</p>
+                                    <p class="text-xs text-gray-500">Suhu: {{ $sensor['suhu'] }}°C • Lembab: {{ $sensor['kelembapan'] }}%</p>
                                 </div>
                             </div>
                             <span class="text-xs font-bold px-2 py-1 rounded {{ $sensor['status'] == 'Normal' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700' }}">{{ $sensor['status'] }}</span>
@@ -500,7 +497,7 @@
             onValue(autoSimpanRef, (snapshot) => {
                 const data = snapshot.val();
                 if (data) {
-                    console.log('Real-time update from autoSimpan:', Object.keys(data).length, 'records');
+                    console.log('Real-time update from user', window.authUserId, ':', Object.keys(data).length, 'records');
                     updateTableFromFirebase();
                 }
             });

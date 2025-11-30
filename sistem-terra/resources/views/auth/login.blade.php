@@ -75,7 +75,7 @@
                 </div>
 
                 <div class="hidden lg:block mb-8">
-                    <h2 class="text-3xl font-bold text-gray-900">Halo! 👋</h2>
+                    <h2 class="text-3xl font-bold text-gray-900">Halo!</h2>
                     <p class="text-gray-500 mt-2">Masukkan detail akun Anda di bawah ini.</p>
                 </div>
 

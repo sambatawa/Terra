@@ -103,21 +103,15 @@ class SensorApiController extends Controller
             ], 500);
         }
     }
-    
-        
-        
     /**
      * Auto-update all detections with sensor data
      */
     public function autoUpdateDetections(Request $request)
     {
         try {
-            $sensorData = $request->only(['suhu', 'kelembaban', 'cahaya', 'status']);
-            
+            $sensorData = $request->only(['suhu', 'kelembapan', 'cahaya', 'status']);
             $result = SensorDataService::updateAllDetectionsWithSensorData($sensorData);
-            
             return response()->json($result);
-            
         } catch (\Exception $e) {
             \Log::error('API auto-update-detections error: ' . $e->getMessage());
             return response()->json([

@@ -12,7 +12,7 @@
                   <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                   <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
                 </span>
-                <span class="text-xs font-bold text-gray-700 tracking-wide">CONNECTED: <span class="text-purple-700">WEBCAM</span></span>
+                <span class="text-xs font-bold text-gray-700 tracking-wide">TERKONEKSI: <span class="text-purple-700">WEBCAM</span></span>
             </div>
         </div>
     </x-slot>
@@ -93,7 +93,7 @@
                             <h3 class="text-xs font-bold text-purple-300 uppercase tracking-widest mb-3">Artificial Intelligence</h3>
                             <div class="bg-purple-800/50 rounded-xl p-4 border border-purple-700 backdrop-blur-sm">
                                 <div class="flex justify-between items-center mb-4">
-                                    <span class="text-sm font-bold">Object Detection</span>
+                                    <span class="text-sm font-bold">Deteksi Objek Penyakit</span>
                                     <label class="relative inline-flex items-center cursor-pointer">
                                         <input type="checkbox" id="aiToggle" class="sr-only peer" checked>
                                         <div class="w-11 h-6 bg-purple-950 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500"></div>
@@ -109,10 +109,6 @@
                                 <div class="w-full bg-purple-950 rounded-full h-2">
                                     <div id="confidence-bar" class="bg-gradient-to-r from-pink-500 to-purple-400 h-2 rounded-full transition-all duration-300 w-0"></div>
                                 </div>
-                                <button onclick="simpanDeteksi()" class="mt-4 w-full bg-white text-purple-900 text-xs font-bold py-2.5 rounded-lg hover:bg-gray-200 transition shadow-lg flex items-center justify-center gap-2">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
-                                    Simpan Hasil Deteksi
-                                </button>
                             </div>
                         </div>
                         <div class="relative z-10 space-y-8">
@@ -155,8 +151,150 @@
         </div>
     </div>
 
-    <script src="{{ asset('js/robot.js') }}">
-        window.ROBOT_SAVE_URL = "/save-detection";      
-        window.CSRF_TOKEN = "{{ csrf_token() }}";
+    <script>
+        window.ROBOT_CONFIG = {
+            localModelPath: "{{ asset('models/best.onnx') }}",
+            localInputSize: 640,
+            confidenceThreshold: 0.25,
+            detectionIntervalMs: 500,
+            localClassSlugs: [
+                "aphids",
+                "bercak_cercospora",
+                "layu_fusarium",
+                "phytophthora_blight",
+                "powdery_mildew",
+                "sehat",
+                "mosaic_virus"
+            ]
+        };
+        function updateLatestSummary() {
+            import("https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js").then(({ initializeApp }) => {
+                import("https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js").then(({ getDatabase, ref, onValue, get }) => {
+                    const firebaseConfig = {
+                        apiKey: "{{ config('services.firebase.api_key') }}",
+                        authDomain: "{{ config('services.firebase.auth_domain') }}",
+                        databaseURL: "{{ config('services.firebase.database_url') }}",
+                        projectId: "{{ config('services.firebase.project_id') }}",
+                        storageBucket: "{{ config('services.firebase.storage_bucket') }}",
+                        messagingSenderId: "{{ config('services.firebase.messaging_sender_id') }}",
+                        appId: "{{ config('services.firebase.app_id') }}",
+                        measurementId: "{{ config('services.firebase.measurement_id') }}"
+                    };
+                    const app = initializeApp(firebaseConfig);
+                    const database = getDatabase(app);
+                    const userId = "{{ Auth::id() }}";
+                    const userDetectionsRef = ref(database, `detections/${userId}`);
+                    
+                    onValue(userDetectionsRef, (snapshot) => {
+                        const data = snapshot.val();
+                        const updateTimeSpan = document.getElementById('summary-updated-time');
+                        if (updateTimeSpan) {
+                            updateTimeSpan.innerHTML = '<span class="text-yellow-400 animate-pulse">Updating...</span>';
+                        }                        
+                        if (data) {
+                            displayLatestSummary(data);
+                        } else {
+                            console.log('No data found di Firebase');
+                            const summaryDiv = document.getElementById('thirtysec-article');
+                            if (summaryDiv) {
+                                summaryDiv.innerHTML = `
+                                    <div class="text-center">
+                                        <p class="text-xs text-gray-400">Belum ada data deteksi</p>
+                                    </div>
+                                `;
+                            }
+                        }
+                    });
+                });
+            });
+        }
+        
+        function displayLatestSummary(detectionData) {
+            const summaryDiv = document.getElementById('thirtysec-article');
+            const updateTimeSpan = document.getElementById('summary-updated-time');
+            
+            if (!summaryDiv) return;
+            console.log('Processing detection data:', detectionData);
+            //TAMPIL LATEST DETECTION
+            let latestDetection = null;
+            let latestTimestamp = 0;
+            
+            Object.keys(detectionData).forEach(key => {
+                const detection = detectionData[key];
+                const timestamp = parseInt(key) || detection.timestamp || detection.created_at || 0;
+                if (timestamp > latestTimestamp) {
+                    latestTimestamp = timestamp;
+                    latestDetection = detection;
+                }
+            });
+            
+            console.log('Latest detection found:', latestDetection);
+            if (!latestDetection) {
+                summaryDiv.innerHTML = `
+                    <div class="text-center">
+                        <p class="text-xs text-gray-400">Belum ada data deteksi</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            //DATA
+            const disease = latestDetection.dominan_disease || latestDetection.label || 'Tidak Dikenali';
+            const confidence = latestDetection.confidence || latestDetection.dominan_confidence_avg || 0;
+            const sensorData = latestDetection.sensor_rata_rata || {};
+            const suhu = sensorData.suhu || 'N/A';
+            const kelembapan = sensorData.kelembapan || 'N/A';
+            const cahaya = sensorData.cahaya || 'N/A';
+            const info = latestDetection.info || {};
+            const ciri = info.ciri || 'Tidak ada informasi';
+            const rekomendasi = info.rekomendasi_penanganan || 'Tidak ada rekomendasi';
+            console.log('Extracted data:', { disease, confidence, suhu, kelembapan, cahaya, ciri, rekomendasi });
+            const now = new Date();
+            updateTimeSpan.textContent = `Update: ${now.toLocaleTimeString('id-ID')}`;
+            
+            //DISPLAY SUMMARY
+            summaryDiv.innerHTML = `
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-semibold text-purple-300">Hasil Deteksi:</span>
+                        <span class="text-xs font-bold text-white">${disease.replace(/_/g, ' ')}</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-semibold text-purple-300">Keyakinan:</span>
+                        <span class="text-xs font-bold text-green-400">${confidence.toFixed(1)}%</span>
+                    </div>
+                    <div class="border-t border-gray-700 pt-2 mt-2">
+                        <div class="text-xs font-semibold text-purple-300 mb-1">Data Sensor:</div>
+                        <div class="grid grid-cols-3 gap-2 text-xs">
+                            <div class="text-center">
+                                <div class="text-gray-400">Suhu</div>
+                                <div class="font-bold text-white">${suhu}°C</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-gray-400">Kelembapan</div>
+                                <div class="font-bold text-white">${kelembapan}%</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-gray-400">Intensitas Cahaya</div>
+                                <div class="font-bold text-white">${cahaya}Lux</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="border-t border-gray-700 pt-2 mt-2">
+                        <div class="text-xs font-semibold text-purple-300 mb-1">Ciri-ciri:</div>
+                        <div class="text-xs text-gray-300">${ciri}</div>
+                    </div>
+                    <div class="border-t border-gray-700 pt-2 mt-2">
+                        <div class="text-xs font-semibold text-purple-300 mb-1">Rekomendasi:</div>
+                        <div class="text-xs text-gray-300">${rekomendasi}</div>
+                    </div>
+                </div>
+            `;
+        }
+        document.addEventListener('DOMContentLoaded', function() {
+            updateLatestSummary();
+        });
     </script>
+<script src="{{ asset('assets/ort/ort.min.js') }}"></script>
+<script src="{{ asset('js/robot.js') }}"></script>
 </x-app-layout>

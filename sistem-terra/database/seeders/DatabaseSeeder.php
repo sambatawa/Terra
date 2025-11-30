@@ -18,7 +18,7 @@ class DatabaseSeeder extends Seeder
         // Buat Akun Teknisi Otomatis
         \App\Models\User::create([
             'name' => 'Master Teknisi',
-            'email' => 'admin@terra.com',
+            'email' => 'inassaqi@gmail.com',
             'password' => bcrypt('12345678'), 
             'role' => 'teknisi',
         ]);
@@ -26,7 +26,28 @@ class DatabaseSeeder extends Seeder
 
         User::factory()->create([
             'name' => 'Test User',
-            'email' => 'test@example.com',
+            'email' => 'inassamarataqia@gmail.com',
+            'password' => bcrypt('12345678'),
+            'role' => 'petani',
         ]);
+        $this->createKodeUnikPetani();
+    }
+
+    /**
+     * Buat data kode unik petani dummy
+     */
+    private function createKodeUnikPetani(): void
+    {
+        $kodeUnikPetanis = [
+            'TERRA167' => 'Inas',
+            'TERRA125' => 'Rafi', 
+            'TERRA015' => 'Arya',
+        ];
+        \Cache::forever('kode_unik_petanis', $kodeUnikPetanis);
+        $this->command->info('Kode Unik Petani berhasil dibuat!');
+        $this->command->info('Kode yang tersedia:');
+        foreach ($kodeUnikPetanis as $kode => $nama) {
+            $this->command->info("- $kode ($nama)");
+        }
     }
 }

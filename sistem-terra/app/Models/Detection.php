@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Detection extends Model
 {
     protected $guarded = [];
-    //konversi tipe data json 
     protected $casts = [
         'jumlah_disease_terdeteksi' => 'array',
         'sensor_rata_rata' => 'array',

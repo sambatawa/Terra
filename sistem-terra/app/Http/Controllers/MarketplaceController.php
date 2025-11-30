@@ -8,10 +8,27 @@ use Illuminate\Support\Facades\Auth;
 
 class MarketplaceController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        // Urutkan produk terbaru
-        $products = Product::latest()->get();
+        $query = Product::with('seller')->latest();
+        
+        // Filter by kategori
+        if ($request->has('category') && $request->category != 'all') {
+            $query->where('category', $request->category);
+        }
+        
+        // Filter by stock (hanya yang tersedia)
+        if ($request->has('in_stock') && $request->in_stock) {
+            $query->where('stock', '>', 0);
+        }
+        
+        // Search by name
+        if ($request->has('search') && !empty($request->search)) {
+            $query->where('name', 'like', '%' . $request->search . '%');
+        }
+        
+        $products = $query->get();
+        
         return view('marketplace.index', compact('products'));
     }
 
@@ -25,11 +42,15 @@ class MarketplaceController extends Controller
             'image' => 'required|image|mimes:jpeg,png,jpg|max:2048',
         ]);
 
-        $imagePath = $request->file('image')->store('products', 'public');
+        // Simpan langsung ke public folder untuk avoid permission issues
+        $imageName = time() . '_' . $request->file('image')->getClientOriginalName();
+        $request->file('image')->move(public_path('images/products'), $imageName);
+        $imagePath = 'images/products/' . $imageName;
 
         Product::create([
             'user_id' => Auth::id(),
             'name' => $request->name,
+            'category' => $request->category,
             'description' => $request->description ?? 'Tidak ada deskripsi',
             'price' => $request->price,
             'stock' => $request->stock, // Simpan Stok

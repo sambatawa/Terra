@@ -1,5 +1,8 @@
 <x-app-layout>
-    <x-slot name="header"><h2 class="font-semibold text-xl text-gray-800">🚩 Laporan Masalah Saya</h2></x-slot>
+    <x-slot name="header">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+        <h2 class="font-semibold text-xl text-gray-800"><i class="fa-solid fa-exclamation-triangle text-red-600 mr-2"></i> Laporan Masalah Saya</h2>
+    </x-slot>
 
     <div class="py-12" x-data="{ openModal: false }">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
@@ -48,7 +51,7 @@
 
         <div x-show="openModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" style="display: none;">
             <div class="bg-white rounded-lg shadow-lg w-1/2 p-6 relative animate-bounce-in">
-                <h3 class="text-lg font-bold mb-4">📝 Lapor Masalah Baru</h3>
+                <h3 class="text-lg font-bold mb-4">Lapor Masalah Baru</h3>
                 <form action="{{ route('reports.store') }}" method="POST">
                     @csrf
                     <div class="mb-4">

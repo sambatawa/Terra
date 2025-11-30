@@ -1,474 +1,589 @@
+ort.env.wasm.wasmPath = '/assets/ort/';
+ort.env.wasm.numThreads = 4;
+const ROBOT_CONFIG = window.ROBOT_CONFIG || {};
+const LOCAL_MODEL_PATH = ROBOT_CONFIG.localModelPath || "";
+const LOCAL_INPUT_SIZE = ROBOT_CONFIG.localInputSize || 640;
+const LOCAL_CONFIDENCE_THRESHOLD = ROBOT_CONFIG.confidenceThreshold ?? 0.3;
+const LOCAL_DETECTION_INTERVAL = ROBOT_CONFIG.detectionIntervalMs || 500;
+
 let isModelRunning = false;
+let detectionLoopStarted = false;
 let lastRecommendationTime = 0;
 let isAlertShown = false;
-
-const videoElement = document.getElementById('webcam');
-const canvas = document.getElementById('aiCanvas');
-const ctx = canvas.getContext('2d');
 let currentStream = null;
-window.ROBOT_SAVE_URL = "/detect";       
-window.CSRF_TOKEN = "{{ csrf_token() }}";
+let detectionResults = [];
+let localSession = null;
+let localModelReady = false;
+let localProcessing = false;
+let lastLocalRun = 0;
+let lastAutoSaveTime = 0;
+const AUTO_SAVE_INTERVAL = 30000; // 30 seconds
 
-//CAMERA HANDLING
+// Global disease counting system
+let currentDisease = null;
+let diseaseCounts = {
+    'aphids': 0,
+    'bercak_cercospora': 0,
+    'layu_fusarium': 0,
+    'mosaic_virus': 0,
+    'phytophthora_blight': 0,
+    'powdery_mildew': 0,
+    'sehat': 0
+};
+
+// Local detection history for counting (last 30 seconds)
+let detectionHistory = [];
+const HISTORY_DURATION = 30000; // 30 seconds
+
+const CLASS_NAME_DISPLAY = {
+    aphids: "Aphids",
+    bercak_cercospora: "Bercak Cercospora",
+    layu_fusarium: "Layu Fusarium",
+    phytophthora_blight: "Phytophthora",
+    powdery_mildew: "Powdery Mildew",
+    sehat: "Sehat",
+    mosaic_virus: "Mosaic Virus"
+};
+
+const LOCAL_CLASS_SLUGS = ROBOT_CONFIG.localClassSlugs || Object.keys(CLASS_NAME_DISPLAY);
+
+const videoElement = document.getElementById("webcam");
+const canvas = document.getElementById("aiCanvas");
+const ctx = canvas.getContext("2d");
+
+const tempCanvasLocal = document.createElement("canvas");
+const tempCtxLocal = tempCanvasLocal.getContext("2d");
+tempCanvasLocal.width = LOCAL_INPUT_SIZE;
+tempCanvasLocal.height = LOCAL_INPUT_SIZE;
+
+document.addEventListener("DOMContentLoaded", setupCanvasOverlay);
+window.addEventListener("beforeunload", cleanupCamera);
+window.addEventListener("pagehide", cleanupCamera);
+
+if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    startCamera();
+} else {
+    log("Browser tidak mendukung kamera.");
+}
+
+function setupCanvasOverlay() {
+    videoElement.addEventListener("loadedmetadata", () => {
+        canvas.width = videoElement.videoWidth;
+        canvas.height = videoElement.videoHeight;
+    });
+    canvas.style.position = "absolute";
+    canvas.style.top = "0";
+    canvas.style.left = "0";
+    canvas.style.zIndex = "10";
+    canvas.style.pointerEvents = "none";
+}
+
 async function checkCameraPermission() {
     try {
         if (navigator.permissions) {
-            const result = await navigator.permissions.query({ name: 'camera' });
-            if (result.state === 'denied') {
-                log("camera akses tidak ada, silahkan izinkan di settingan browser");
+            const result = await navigator.permissions.query({ name: "camera" });
+            if (result.state === "denied") {
+                log("Akses kamera ditolak. Mohon izinkan kamera di pengaturan browser.");
                 return false;
             }
         }
         return true;
-    } catch (e) {
+    } catch {
         return true;
     }
 }
 
 async function startCamera() {
-    try {
-        const hasPermission = await checkCameraPermission();
-        if (!hasPermission) return;
-        log("Requesting camera access...");
-        const stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-                facingMode: 'environment',
-                width: { ideal: 1280 },
-                height: { ideal: 720 }
-            }
-        });
-        currentStream = stream;
-        videoElement.srcObject = stream;
-        await new Promise(resolve => {
-            videoElement.onloadedmetadata = () => {
-                canvas.width = videoElement.videoWidth;
-                canvas.height = videoElement.videoHeight;
-                log(`Video ready: ${videoElement.videoWidth}x${videoElement.videoHeight}`);
-                resolve();
-            };
-        });
-        await videoElement.play();
+    try {
+        const hasPermission = await checkCameraPermission();
+        if (!hasPermission) return;
 
-        document.getElementById('camera-loading').style.display = 'none';
-        log("Camera started");
-        initAI();
+        log("Requesting camera access...");
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+                facingMode: "environment",
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            }
+        });
 
-    } catch (error) {
-        console.error('Camera error:', error);
-        log("Camera error: " + error.message);
-        document.getElementById('camera-loading').innerHTML =
-            `<p class="text-red-400 text-sm font-bold">${error.message}</p>`;
-    }
+        currentStream = stream;
+        videoElement.srcObject = stream;
+        await new Promise(resolve => {
+            videoElement.onloadedmetadata = () => {
+                canvas.width = videoElement.videoWidth;
+                canvas.height = videoElement.videoHeight;
+                log(`Resolusi: ${videoElement.videoWidth}x${videoElement.videoHeight}`);
+                resolve();
+            };
+        });
+        await videoElement.play();
+
+        document.getElementById("camera-loading").style.display = "none";
+        log("Kamera dimulai");
+        await initLocalModel();
+        ensureDetectionLoop();
+    } catch (error) {
+        console.error("Kamera error:", error);
+        log("Kamera error: " + error.message);
+        document.getElementById("camera-loading").innerHTML =
+            `<p class="text-red-400 text-sm font-bold">${error.message}</p>`;
+    }
 }
 
 function cleanupCamera() {
-    if (currentStream) {
-        currentStream.getTracks().forEach(t => t.stop());
-        currentStream = null;
-        log("Camera stopped");
-    }
+    if (currentStream) {
+        currentStream.getTracks().forEach(track => track.stop());
+        currentStream = null;
+        log("Kamera berhenti");
+    }
 }
 
-window.addEventListener('beforeunload', cleanupCamera);
-window.addEventListener('pagehide', cleanupCamera);
+async function initLocalModel() {
+    if (localModelReady) return true;
+    if (!LOCAL_MODEL_PATH) {
+        log("localModelPath belum diset di window.ROBOT_CONFIG.");
+        return false;
+    }
+    if (typeof ort === "undefined") {
+        log("Script ort.min.js belum dimuat.");
+        return false;
+    }
 
-if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-    startCamera();
-} else {
-    log("Browser tidak mendukung kamera.");
+    try {
+        document.getElementById("ai-status").innerText = "LOADING...";
+        const options = { 
+            executionProviders: ["webgl","wasm"], 
+            graphOptimizationLevel: "all",
+            logSeverityLevel: 3, 
+            sessionOptions: {
+                    enableCpuMemArena: false,
+                    enableMemPattern: false,
+                    executionMode: "sequential"
+                }
+        };
+        localSession = await ort.InferenceSession.create(LOCAL_MODEL_PATH, options);
+        localModelReady = true;
+        isModelRunning = true;
+        document.getElementById("ai-status").innerText = "AKTIF";
+        document.getElementById("ai-status").className = "text-xs font-bold text-green-400";
+        log("Model ONNX berhasil dimuat");
+        return true;
+    } catch (error) {
+        console.error(error);
+        log("Gagal memuat model lokal: " + error.message);
+        document.getElementById("ai-status").innerText = "GAGAL";
+        document.getElementById("ai-status").className = "text-xs font-bold text-red-400";
+        return false;
+    }
 }
 
-//YOLO API INISIALISASI
-async function initAI() {
-    log("Connecting to YOLO backend...");
-    try {
-        const healthCheck = await fetch(window.ROBOT_API_URL + "/health");
-        if (!healthCheck.ok) throw new Error("Backend offline");
-
-        const health = await healthCheck.json();
-        log("Backend Connected - Realtime endpoint ready");
-
-        document.getElementById('ai-status').innerText = "ACTIVE";
-        document.getElementById('ai-status').className = "text-xs font-bold text-green-400";
-        isModelRunning = true;
-        window.requestAnimationFrame(loopAI);
-        startAutoSave();
-        startSummaryPolling();
-    } catch (e) {
-        log("Backend Error: " + (e.message || e));
-        document.getElementById('ai-status').innerText = "OFFLINE";
-        document.getElementById('ai-status').className = "text-xs font-bold text-red-400";
-
-        if ((e.message || "").toLowerCase().includes("backend offline")) {
-            log("Pastikan main.py berjalan di http://localhost:8001");
-        }
-    }
+function ensureDetectionLoop() {
+    if (!detectionLoopStarted) {
+        detectionLoopStarted = true;
+        window.requestAnimationFrame(loopAI);
+    }
 }
-
-//FRAME LOOP + PREDIKSI
-let lastFrameTime = 0;
-const frameInterval = 1000 / 30;
-let detectionResults = [];
-let isProcessing = false;
-let errorCount = 0;
-const MAX_ERROR = 3;
-const MAX_IMAGE_SIZE = 416;
-const REQUEST_TIMEOUT = 15000;
 
 async function loopAI() {
-    if (isModelRunning && document.getElementById('aiToggle').checked) {
-        await predict();
-    }
-    window.requestAnimationFrame(loopAI);
+    const toggle = document.getElementById("aiToggle");
+    if (isModelRunning && toggle && toggle.checked) {
+        await predictLocal();
+    }
+    window.requestAnimationFrame(loopAI);
+}
+/**
+ * Menghitung Intersection Over Union (IOU) dari dua bounding box.
+ * @param {object} box1 - {x1, y1, x2, y2}
+ * @param {object} box2 - {x1, y1, x2, y2}
+ * @returns {number} Nilai IOU (0 hingga 1).
+ */
+function calculateIOU(box1, box2) {
+    const xA = Math.max(box1.x1, box2.x1);
+    const yA = Math.max(box1.y1, box2.y1);
+    const xB = Math.min(box1.x2, box2.x2);
+    const yB = Math.min(box1.y2, box2.y2);
+
+    // Hitung area interseksi
+    const intersectionWidth = Math.max(0, xB - xA);
+    const intersectionHeight = Math.max(0, yB - yA);
+    const intersectionArea = intersectionWidth * intersectionHeight;
+
+    // Hitung area box1 dan box2
+    const area1 = (box1.x2 - box1.x1) * (box1.y2 - box1.y1);
+    const area2 = (box2.x2 - box2.x1) * (box2.y2 - box2.y1);
+
+    // Hitung IOU
+    return intersectionArea / (area1 + area2 - intersectionArea);
 }
 
-async function predict() {
-    const now = Date.now();
-    if (now - lastFrameTime < frameInterval) return;
-    if (isProcessing) return;
-    if (errorCount >= MAX_ERROR) return;
-    if (!videoElement || !currentStream || videoElement.readyState < 2) return;
-    if (!isModelRunning) {
-        return;
-    }
-    lastFrameTime = now;
-    isProcessing = true;
+/**
+ * Menerapkan Non-Maximum Suppression (NMS).
+ * @param {Array} boxes - Array deteksi {class, confidence, bbox: {x1, y1, x2, y2}}
+ * @param {number} iouThreshold - Batas IOU untuk menekan box (misalnya 0.45)
+ * @returns {Array} Array deteksi yang sudah difilter.
+ */
+function nonMaxSuppression(boxes, iouThreshold) {
+    if (!boxes || boxes.length === 0) return [];
+    //SORTING CONFIDENCE (DESC)
+    boxes.sort((a, b) => b.confidence - a.confidence);
+    const pickedBoxes = [];
+    const suppressed = new Array(boxes.length).fill(false);
+    for (let i = 0; i < boxes.length; i++) {
+        if (suppressed[i]) continue;
+        const boxI = boxes[i];
+        pickedBoxes.push(boxI);
+        //BANDINGAN BOX
+        for (let j = i + 1; j < boxes.length; j++) {
+            if (suppressed[j]) continue;
+            const boxJ = boxes[j];
+            const iou = calculateIOU(boxI.bbox, boxJ.bbox);
+            //HAPUS DUPLIKAT
+            if (iou > iouThreshold) {
+                suppressed[j] = true;
+            }
+        }
+    }
+    return pickedBoxes;
+}
+async function predictLocal() {
+    const now = Date.now();
+    if (now - lastLocalRun < LOCAL_DETECTION_INTERVAL) return;
+    if (localProcessing || !localModelReady) return;
+    if (!videoElement || videoElement.readyState < 2) return;
+    localProcessing = true;
+    lastLocalRun = now;
+    try {
+        //PREPROCESSING RESIZE
+        tempCtxLocal.drawImage(videoElement, 0, 0, LOCAL_INPUT_SIZE, LOCAL_INPUT_SIZE);
+        const imageData = tempCtxLocal.getImageData(0, 0, LOCAL_INPUT_SIZE, LOCAL_INPUT_SIZE);
+        
+        //NORMALISASI
+        const inputSizeSquared = LOCAL_INPUT_SIZE * LOCAL_INPUT_SIZE;
+        const input = new Float32Array(3 * inputSizeSquared);
+        const pixels = imageData.data;
 
-    const tempCanvas = document.createElement('canvas');
-    const tempCtx = tempCanvas.getContext('2d');
-    let w = videoElement.videoWidth;
-    let h = videoElement.videoHeight;
-    if (w > MAX_IMAGE_SIZE || h > MAX_IMAGE_SIZE) {
-        const scale = Math.min(MAX_IMAGE_SIZE / w, MAX_IMAGE_SIZE / h);
-        w = Math.floor(w * scale);
-        h = Math.floor(h * scale);
-    }
+        for (let i = 0; i < inputSizeSquared; i++) {
+            const idx = i * 4;
+            input[i] = pixels[idx] / 255.0; 
+            input[inputSizeSquared + i] = pixels[idx + 1] / 255.0; 
+            input[2 * inputSizeSquared + i] = pixels[idx + 2] / 255.0; 
+        }
+        //SHAPE
+        const tensor = new ort.Tensor("float32", input, [1, 3, LOCAL_INPUT_SIZE, LOCAL_INPUT_SIZE]);
+        //INFERENSI
+        const feeds = {};
+        feeds[localSession.inputNames[0]] = tensor; 
+        const results = await localSession.run(feeds);
+        //POSTPROCESSING
+        const outputName = localSession.outputNames[0];
+        const outputTensor = results[outputName];
+        let detections = processLocalOutput(
+            outputTensor.data,
+            outputTensor.dims,
+            videoElement.videoWidth,
+            videoElement.videoHeight
+        );
+        detections = nonMaxSuppression(detections, 0.45);
+        applyDetections(detections, { frameWidth: videoElement.videoWidth, frameHeight: videoElement.videoHeight });
+        
+    } catch (error) {
+        console.error("Local inference error:", error);
+        console.error("Error stack:", error.stack);
+        log("Local inference error: " + (error.message || error));
+        log("Error location: " + (error.stack?.split('\n')[1] || 'unknown'));
+    } finally {
+        localProcessing = false;
+    }
+}
+//OUTPUT PROCESSING
+function processLocalOutput(data, dims, imgWidth, imgHeight) {
+    const detections = [];
+    if (!data || !dims || dims.length < 3) return detections;
+    const rows = dims[1];
+    const cols = dims[2];
+    const isTransposed = rows > cols;
+    const numAnchors = isTransposed ? rows : cols;
+    const numClasses = (isTransposed ? cols : rows) - 4;
+    const CONF_THRESH = LOCAL_CONFIDENCE_THRESHOLD;
+    //SKALA FAKTOR SESUAI?
+    const scaleX = imgWidth / LOCAL_INPUT_SIZE;
+    const scaleY = imgHeight / LOCAL_INPUT_SIZE;
+    //CEK CONFIDENCE
+    for (let i = 0; i < numAnchors; i++) {
+        let maxScore = 0;
+        let maxClassIndex = -1;
+        let x, y, w, h;
+        let offset;
+        if (isTransposed) {
+            offset = i * (numClasses + 4);
+            //CHECK FIRST BOX
+            const boxScore = Math.max(data[offset], data[offset + 1], data[offset + 2], data[offset + 3]);
+            if (boxScore < CONF_THRESH * 0.5) continue;
+            for (let c = 0; c < numClasses; c++) {
+                const score = data[offset + 4 + c];
+                if (score > maxScore) {
+                    maxScore = score;
+                    maxClassIndex = c;
+                }
+            }
+            if (maxScore > CONF_THRESH) {
+                x = data[offset];
+                y = data[offset + 1];
+                w = data[offset + 2];
+                h = data[offset + 3];
+            }
+        } else {
+            const stride = numAnchors;
+            offset = i;
+            //CHECK FIRST BOX
+            const boxScore = Math.max(data[i], data[stride + i], data[2 * stride + i], data[3 * stride + i]);
+            if (boxScore < CONF_THRESH * 0.5) continue;
+            for (let c = 0; c < numClasses; c++) {
+                const score = data[(4 + c) * stride + i];
+                if (score > maxScore) {
+                    maxScore = score;
+                    maxClassIndex = c;
+                }
+            }
+            if (maxScore > CONF_THRESH) {
+                x = data[i];
+                y = data[stride + i];
+                w = data[2 * stride + i];
+                h = data[3 * stride + i];
+            }
+        }
 
-    tempCanvas.width = w;
-    tempCanvas.height = h;
-    tempCtx.drawImage(videoElement, 0, 0, w, h);
-    tempCanvas.toBlob(async blob => {
-        let timeoutId = null;
-        const controller = new AbortController();
-        try {
-            const formData = new FormData();
-            formData.append('file', blob, 'frame.jpg');
-            formData.append('frame_w', String(w));
-            formData.append('frame_h', String(h));
-            timeoutId = setTimeout(() => {
-                controller.abort();
-            }, REQUEST_TIMEOUT);
+        if (maxScore <= CONF_THRESH || maxClassIndex === -1) continue;
+        //LOOP CALCULATE SKALA
+        let x1 = (x - w / 2) * scaleX;
+        let y1 = (y - h / 2) * scaleY;
+        let wScaled = w * scaleX;
+        let hScaled = h * scaleY;
+        x1 = clamp(x1, 0, imgWidth);
+        y1 = clamp(y1, 0, imgHeight);
+        wScaled = clamp(wScaled, 0, imgWidth);
+        hScaled = clamp(hScaled, 0, imgHeight);
 
-            const response = await fetch(window.ROBOT_API_URL + "/detect/realtime", {
-                method: "POST",
-                body: formData,
-                signal: controller.signal
-            });
-            clearTimeout(timeoutId);
-            timeoutId = null;
-
-            if (!response.ok) {
-                let text = "";
-                try { text = await response.text(); } catch (e) { text = "(no body)"; }
-                console.error("detect/realtime error:", response.status, text);
-                log(`Backend error ${response.status}: ${text.substring(0,200)}`);
-                errorCount++;
-                detectionResults = [];
-                drawBoundingBoxes(detectionResults);
-            } else {
-                errorCount = 0;
-                const data = await response.json();
-                console.log("realtime response:", data);
-                detectionResults = data.detections || [];
-                drawBoundingBoxes(detectionResults);
-                updateUIFromDetections(detectionResults);
-            }
-        } catch (err) {
-            if (err && err.name === 'AbortError') {
-                console.warn("Fetch aborted (timeout or manual):", err);
-                log("Request timeout: backend took too long or request aborted");
-            } else {
-                console.error("Fetch error:", err);
-                log("Network/timeout error: " + (err.message || err));
-            }
-            errorCount++;
-            detectionResults = [];
-            drawBoundingBoxes(detectionResults);
-        } finally {
-            if (timeoutId) { clearTimeout(timeoutId); }
-            isProcessing = false;
-        }
-    }, "image/jpeg", 0.3);
+        const bbox = {
+            x1,
+            y1,
+            x2: clamp(x1 + wScaled, 0, imgWidth),
+            y2: clamp(y1 + hScaled, 0, imgHeight),
+            width: wScaled,
+            height: hScaled
+        };
+        detections.push({
+            class: LOCAL_CLASS_SLUGS[maxClassIndex] || `class_${maxClassIndex}`,
+            confidence: maxScore,
+            bbox
+        });
+    }
+    return detections;
 }
 
-//BOUNDING BOX DRAWING
-function getDisplayName(name) {
-    const names = {
-        sehat: "Sehat",
-        bercak_cercospora: "Bercak Cercospora",
-        layu_fusarium: "Layu Fusarium",
-        mosaic_virus: "Mosaic Virus",
-        aphids: "Aphids",
-        phytophthora_blight: "Phytophthora",
-        powdery_mildew: "Powdery Mildew"
-    };
-    return names[name] || name.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase());
+function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), max);
 }
 
+function applyDetections(det, meta = {}) {
+    if (typeof meta.frameWidth === "number") canvas.dataset.lastWidth = meta.frameWidth;
+    if (typeof meta.frameHeight === "number") canvas.dataset.lastHeight = meta.frameHeight;
+    detectionResults = det;
+    updateDiseaseCounting(det);
+    drawBoundingBoxes(det);
+    updateUIFromDetections(det);
+}
+
+function updateDiseaseCounting(det) {
+    const now = Date.now();
+    detectionHistory = detectionHistory.filter(item => now - item.timestamp < HISTORY_DURATION);
+    if (det.length === 0) {
+        //UPDATE CURRENT DISEASE
+        currentDisease = null;
+        console.log('[DISEASE COUNT] No detection');
+        return;
+    }
+    //DETECTIONS DISEASE HIGH
+    const topDetection = det.reduce((a, b) => (a.confidence > b.confidence ? a : b));
+    const detectedClass = topDetection.class;
+    //UPDATE AGAIN BRO
+    currentDisease = detectedClass;
+    //PUSH TO HISTORY
+    detectionHistory.push({
+        disease: detectedClass,
+        timestamp: now,
+        confidence: topDetection.confidence
+    });
+    //PANGGIL FUNCTION COUNT DISEASE
+    recalculateDiseaseCounts();
+    console.log('[DISEASE COUNT] Current:', diseaseCounts);
+}
+
+function recalculateDiseaseCounts() {
+    Object.keys(diseaseCounts).forEach(key => {
+        diseaseCounts[key] = 0;
+    });
+    detectionHistory.forEach(item => {
+        if (diseaseCounts.hasOwnProperty(item.disease)) {
+            diseaseCounts[item.disease]++;
+        }
+    });
+}
+
+function getDisplayName(slug) {
+    return CLASS_NAME_DISPLAY[slug] || slug.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+}
+//BBOXES
 function drawBoundingBoxes(det) {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    det.forEach(d => {
-        const { x1, y1, width, height } = d.bbox; 
-        const name = getDisplayName(d.class);
-        const confDecimal = Number(d.confidence).toFixed(2);
-        const confPercent = Math.round(d.confidence * 100);
-
-        ctx.strokeStyle = "#8B5CF6";
-        ctx.lineWidth = 3;
-        ctx.strokeRect(x1, y1, width, height);
-        ctx.fillStyle = "#8B5CF6";
-        ctx.fillRect(x1, y1 - 22, ctx.measureText(name + " " + confDecimal).width + 20, 20);
-        ctx.fillStyle = "#fff";
-        ctx.fillText(`${name} ${confDecimal}`, x1 + 5, y1 - 7);
-    });
+    const lastWidth = Number(canvas.dataset.lastWidth) || videoElement.videoWidth || 1;
+    const lastHeight = Number(canvas.dataset.lastHeight) || videoElement.videoHeight || 1;
+    const scaleX = canvas.width / lastWidth;
+    const scaleY = canvas.height / lastHeight;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    det.forEach(d => {
+        const bbox = d.bbox;
+        if (!bbox) return;
+        const x1 = (bbox.x1 || 0) * scaleX;
+        const y1 = (bbox.y1 || 0) * scaleY;
+        const width = (bbox.width || (bbox.x2 - bbox.x1) || 0) * scaleX;
+        const height = (bbox.height || (bbox.y2 - bbox.y1) || 0) * scaleY;
+        const name = getDisplayName(d.class);
+        const confPercent = Math.round(d.confidence * 100);
+        ctx.strokeStyle = "#8B5CF6";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(x1, y1, width, height);
+        ctx.fillStyle = "#8B5CF6";
+        ctx.fillRect(x1, y1 - 22, ctx.measureText(name + " " + confPercent + "%").width + 20, 20);
+        ctx.fillStyle = "#fff";
+        ctx.fillText(`${name} ${confPercent}%`, x1 + 5, y1 - 7);
+    });
 }
 
-//REKOMENDASI POPUP
 function updateUIFromDetections(det) {
-    if (!det.length) return;
-    const top = det.reduce((a, b) => (a.confidence > b.confidence ? a : b));
-    const confDecimal = Number(top.confidence).toFixed(2);
-    const percent = Math.round(top.confidence * 100);
-    document.getElementById("confidence-text").innerText = getDisplayName(top.class);
-    document.getElementById("confidence-percent").innerText = confDecimal;
-    document.getElementById("confidence-bar").style.width = percent + "%";
-    if (!top.class.includes("sehat") && !isAlertShown) {
-        const now = Date.now();
-        if (now - lastRecommendationTime > 5000) {
-            lastRecommendationTime = now;
-            fetch(`/api/product-recommendation?label=${top.class}`)
-                .then(r => r.json())
-                .then(d => { if (d.found) showAlert(d); });
-        }
-    }
+    if (!det.length) {
+        document.getElementById("confidence-text").innerText = "-";
+        document.getElementById("confidence-percent").innerText = "0";
+        document.getElementById("confidence-bar").style.width = "0%";
+        return;
+    }
+    const top = det.reduce((a, b) => (a.confidence > b.confidence ? a : b));
+    const percent = Math.round(top.confidence * 100);
+    document.getElementById("confidence-text").innerText = getDisplayName(top.class);
+    document.getElementById("confidence-percent").innerText = `${percent}%`;
+    document.getElementById("confidence-bar").style.width = `${percent}%`;
+
+}
+setInterval(() => {
+    resetDiseaseCounts();
+}, 30000);
+
+function resetDiseaseCounts() {
+    const countsBeforeReset = {...diseaseCounts};
+    if (Object.values(countsBeforeReset).some(count => count > 0)) {
+        const detections = Object.entries(countsBeforeReset)
+            .filter(([disease, count]) => count > 0)
+            .map(([disease, count]) => ({
+                class: disease,
+                confidence: 0.8,
+                count: count
+            }));
+        autoSaveDetection(detections, countsBeforeReset);
+    }
+    Object.keys(diseaseCounts).forEach(key => {
+        diseaseCounts[key] = 0;
+    });
+    detectionHistory = [];
+    console.log('[DISEASE COUNT] save after 30s');
 }
 
 function showAlert(data) {
-    isAlertShown = true;
-    const box = document.getElementById('product-alert');
-    document.getElementById('rec-image').src = data.image;
-    document.getElementById('rec-name').innerText = data.name;
-    document.getElementById('rec-price').innerText = data.price;
-    document.getElementById('rec-link').href = data.link;
-
-    box.classList.remove('hidden');
-    setTimeout(() => box.classList.remove('translate-y-20', 'opacity-0'), 50);
+    isAlertShown = true;
+    const box = document.getElementById("product-alert");
+    document.getElementById("rec-image").src = data.image;
+    document.getElementById("rec-name").innerText = data.name;
+    document.getElementById("rec-price").innerText = data.price;
+    document.getElementById("rec-link").href = data.link;
+    box.classList.remove("hidden");
+    setTimeout(() => box.classList.remove("translate-y-20", "opacity-0"), 50);
 }
 
 function closeAlert() {
-    const box = document.getElementById('product-alert');
-    box.classList.add('translate-y-20', 'opacity-0');
-    setTimeout(() => { box.classList.add('hidden'); isAlertShown = false; }, 400);
+    const box = document.getElementById("product-alert");
+    box.classList.add("translate-y-20", "opacity-0");
+    setTimeout(() => { box.classList.add("hidden"); isAlertShown = false; }, 400);
 }
 
-//SAVE DETEKSI
-function simpanDeteksi() {
-    if (!detectionResults.length) return alert("Belum ada deteksi!");
-    canvas.toBlob(blob => {
-        const formData = new FormData();
-        formData.append('file', blob, 'manual_save.jpg'); 
-        formData.append('suhu', 26.9);
-        formData.append('kelembapan', 83.5);
-        formData.append('cahaya', 42);
-        formData.append('user_id', 'manual_user');
 
-        //PERBAIKAN 3: Gunakan ROBOT_API_URL + ROBOT_SAVE_URL
-        fetch(window.ROBOT_API_URL + window.ROBOT_SAVE_URL, {
-            method: "POST",
-            headers: {},
-            body: formData
-        })
-            .then(r => r.json())
-            .then(d => {
-                if (d.dominan_disease) {
-                    alert(`Tersimpan! Deteksi: ${getDisplayName(d.dominan_disease)}`);
-                    log("Saved manually");
-                } else {
-                    alert("Gagal menyimpan. Cek console untuk error backend.");
-                    log("Manual save failed.");
-                }
-            })
-            .catch(e => {
-                log("Error manual save: " + e.message);
-                console.error("Error manual save:", e);
-            });
-    }, "image/jpeg", 0.9);
-}
-
-let autoSaveInterval;
-const AUTO_SAVE_INTERVAL = 30000;
-
-function startAutoSave() {
-    if (autoSaveInterval) clearInterval(autoSaveInterval);
-    autoSaveInterval = setInterval(async () => {
-        if (!isModelRunning) return;
-        log("Auto-save in progress...");
+async function autoSaveDetection(detections, countsToSave) {
+    try {
+        let sensorData = {};
         try {
-            const canvas = document.createElement('canvas');
-            canvas.width = videoElement.videoWidth;
-            canvas.height = videoElement.videoHeight;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
-            
-            const formData = new FormData();
-            canvas.toBlob(async (blob) => {
-                formData.append('file', blob, 'snapshot.jpg');
-                formData.append('save', 'true');
-                
-                const response = await fetch(`${window.ROBOT_API_URL}/detect/auto?save=true`, {
-                    method: 'POST',
-                    body: formData
-                });
-                if (!response.ok) {
-                    let txt = "";
-                    try { txt = await response.text(); } catch (e) { txt = "(no body)"; }
-                    log(`Auto-save failed ${response.status}: ${txt.substring(0,200)}`);
-                    return;
+            const sensorResponse = await fetch('http://localhost:8001/sensor/data');
+            if (sensorResponse.ok) {
+                const sensorResult = await sensorResponse.json();
+                if (sensorResult.success && sensorResult.data) {
+                    const timestamps = Object.keys(sensorResult.data);
+                    if (timestamps.length > 0) {
+                        const latestTimestamp = timestamps[timestamps.length - 1];
+                        const latestData = sensorResult.data[latestTimestamp];
+                        sensorData = {
+                            suhu: latestData.suhu,
+                            kelembapan: latestData.kelembapan,
+                            cahaya: latestData.cahaya
+                        };
+                    }
                 }
-                const result = await response.json();
-                if (result.saved_this_frame) {
-                    log("Auto-save berhasil!");
-                } else {
-                    log(`Auto-save dilewati: ${result.skip_reason || 'tidak diketahui'}`);
-                }
-            }, 'image/jpeg');
-            
-        } catch (error) {
-            console.error('Auto-save error:', error);
-            log(`Auto-save error: ${error.message}`);
+            }
+        } catch (e) {
+            sensorData = {
+                suhu: 26.9,
+                kelembapan: 83.5,
+                cahaya: 42
+            };
         }
-    }, AUTO_SAVE_INTERVAL);
-}
-//SUMMARY POLLING RINGKASAN DETEKSI
-function updateSummaryUI(content, type = "info") {
-    const summaryElement = document.getElementById('thirtysec-article');
-    if (!summaryElement) {
-        console.error("Element 'thirtysec-article' not found!");
-        return;
-    }
-    summaryElement.innerHTML = '';
-    
-    if (typeof content === 'string' && !content.includes('<')) {
-        let className = "text-xs ";
-        let icon = "";
-        switch(type) {
-            case "loading":
-                className += "text-yellow-400";
-                icon = '<div class="summary-loading mx-auto mb-2"></div>';
-                break;
-            case "error":
-                className += "text-red-400";
-                icon = '❌ ';
-                break;
-            case "empty":
-                className += "text-white-500";
-                icon = 'ℹ️ ';
-                break;
-            case "success":
-                className += "text-gray-300";
-                break;
-            default:
-                className += "text-gray-400";
-        }
+        const dominantDisease = Object.entries(countsToSave)
+            .filter(([disease, count]) => count > 0)
+            .sort(([,a], [,b]) => b - a)[0]?.[0] || 'sehat';
         
-        summaryElement.innerHTML = `
-            <div class="text-center py-4">
-                ${icon}
-                <p class="${className}">${content}</p>
-            </div>
-        `;
-    } else {
-        summaryElement.innerHTML = content;
-    }
-}
-
-function displayFastAPISummaryData(data) {
-    const latest = data.detections && data.detections.length > 0 ? data.detections[0] : null;
-    if (!latest) {
-        updateSummaryUI("Belum ada data deteksi tersimpan.", "empty");
-        return;
-    }
-    const timestamp = new Date(latest.timestamp).toLocaleTimeString('id-ID');
-    let summaryHTML = `
-        <div class="space-y-2">
-            <div class="flex justify-between items-center">
-                <span class="text-xs font-semibold text-purple-400">30s...</span>
-                <span class="text-xs text-gray-400">${timestamp}</span>
-            </div>
-            <div class="flex justify-between items-center">
-                <span class="text-sm text-white font-medium">
-                    ${getDisplayName(latest.dominan_disease)}
-                </span>
-                <span class="text-xs px-2 py-1 rounded-full ${latest.status === 'sehat' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}">
-                    ${latest.status.toUpperCase()}
-                </span>
-            </div>
-            <div class="text-xs text-gray-300">
-                Confidence: ${(latest.dominan_confidence_avg * 100).toFixed(1)}%
-            </div>
-    `;
-    
-    if (latest.info) {
-        summaryHTML += `
-            <div class="mt-2 pt-2 border-t border-gray-600">
-                <div class="text-xs text-purple-200 font-semibold">Ciri-ciri:</div>
-                <div class="text-xs text-gray-300 mt-1">${latest.info.ciri || 'Tidak tersedia'}</div>
-                <div class="text-xs text-purple-200 font-semibold mt-2">Rekomendasi:</div>
-                <div class="text-xs text-gray-300 mt-1">${latest.info.rekomendasi_penanganan || 'Tidak tersedia'}</div>
-            </div>
-        `;
-    }
-    summaryHTML += `</div>`;
-    updateSummaryUI(summaryHTML, "success");
-}
-
-//RINGKASAN
-function startSummaryPolling() {
-    console.log("Start Loop hasil deteksi dan rekomendasi...");
-    updateSummaryUI("Memuat ringkasan deteksi terbaru...", "loading");
-
-    fetch(window.ROBOT_API_URL + '/detections?limit=1')
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log("Latest detection data:", data);
-            
-            if (data.detections && data.detections.length > 0) {
-                displayFastAPISummaryData(data);
-            } else {
-                updateSummaryUI("Belum ada data deteksi tersimpan di database.", "empty");
-            }
-        })
-        .catch(error => {
-            console.error("Error fetching detection summary:", error);
-            updateSummaryUI("Gagal memuat ringkasan. Cek koneksi backend.", "error");
+        const payload = {
+            suhu: sensorData.suhu,
+            kelembapan: Math.round(sensorData.kelembapan),
+            cahaya: Math.round(sensorData.cahaya),
+            save: true,
+            user_id: window.authUserId || 'autoSimpan',
+            dominan_disease: dominantDisease,
+            disease_counts: countsToSave
+        };
+        console.log('[AUTO SAVE] check payload:', JSON.stringify(payload, null, 2));
+        const saveResponse = await fetch('http://localhost:8001/detect/auto', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
         });
+        
+        if (saveResponse.ok) {
+            const result = await saveResponse.json();
+            console.log('[AUTO SAVE] Berhasil:', result);
+        } else {
+            console.error('[AUTO SAVE] Berhasil:', saveResponse.statusText);
+        }
+    } catch (error) {
+        console.error('[AUTO SAVE] Error:', error);
+    }
 }
-//LOGGING
+
 function log(msg) {
-    const div = document.getElementById('console-log');
-    const p = document.createElement('p');
+    const div = document.getElementById("console-log");
+    if (!div) return;
+    const p = document.createElement("p");
     p.innerText = "> " + msg;
     div.appendChild(p);
     div.scrollTop = div.scrollHeight;
 }
 
-//KEYBOARD VISUAL FEEDBACK
 const keyMap = {
     w: "btn-w",
     a: "btn-a",
@@ -477,7 +592,7 @@ const keyMap = {
     arrowup: "btn-up",
     arrowdown: "btn-down",
     arrowleft: "btn-left",
-    arrowright: "btn-right",
+    arrowright: "btn-right"
 };
 
 const actionMap = {
@@ -488,7 +603,7 @@ const actionMap = {
     arrowup: "Cam: UP",
     arrowdown: "Cam: DOWN",
     arrowleft: "Cam: LEFT",
-    arrowright: "Cam: RIGHT",
+    arrowright: "Cam: RIGHT"
 };
 
 document.addEventListener("keydown", e => {
@@ -505,5 +620,6 @@ document.addEventListener("keyup", e => {
     if (keyMap[key]) {
         const btn = document.getElementById(keyMap[key]);
         btn?.classList.remove("translate-y-[4px]", "shadow-none");
-}
+    }
 });
+

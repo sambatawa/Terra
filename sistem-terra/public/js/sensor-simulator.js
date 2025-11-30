@@ -13,14 +13,14 @@ class SensorSimulator {
         if (randomSuhu > 30.5) {
             statusSensor = 'Warning - Suhu Tinggi';
         } else if (randomHum < 57) {
-            statusSensor = 'Warning - Kelembaban Rendah';
+            statusSensor = 'Warning - Kelembapan Rendah';
         } else if (randomLux > 1400) {
             statusSensor = 'Warning - Cahaya Tinggi';
         }
         
         return {
             suhu: parseFloat(randomSuhu),
-            kelembaban: randomHum,
+            kelembapan: randomHum,
             cahaya: randomLux,
             status: statusSensor,
             timestamp_sensor: new Date().toISOString()
@@ -47,7 +47,7 @@ class SensorSimulator {
                 },
                 body: JSON.stringify({
                     suhu: sensorData.suhu,
-                    kelembaban: sensorData.kelembaban,
+                    kelembapan: sensorData.kelembapan,
                     cahaya: sensorData.cahaya,
                     status: sensorData.status,
                     timestamp: sensorData.timestamp_sensor
@@ -88,13 +88,13 @@ class SensorSimulator {
         const humElement = document.getElementById('val-hum');
         const luxElement = document.getElementById('val-lux');
         if (suhuElement) suhuElement.innerText = sensorData.suhu;
-        if (humElement) humElement.innerText = sensorData.kelembaban;
+        if (humElement) humElement.innerText = sensorData.kelembapan;
         if (luxElement) luxElement.innerText = sensorData.cahaya;
         if (window.sensorChart) {
             window.sensorChart.data.datasets[0].data.shift();
             window.sensorChart.data.datasets[1].data.shift();
             window.sensorChart.data.datasets[0].data.push(sensorData.suhu);
-            window.sensorChart.data.datasets[1].data.push(sensorData.kelembaban);
+            window.sensorChart.data.datasets[1].data.push(sensorData.kelembapan);
             window.sensorChart.update();
         }
         const statusElement = document.querySelector('.text-green-600');
