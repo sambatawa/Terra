@@ -290,13 +290,12 @@ composer audit
 npm audit
 ```
 <div align="center">
-  <h3>🌱 Dibuat dengan ❤️ untuk Petani Indonesia</h3>
-  <p><strong>Memberdayakan Pertanian dengan Teknologi</strong></p>
+  <p><strong>Memberdayakan Pertanian Terung Ungu dengan Teknologi</strong></p>
   <p>© 2025 Terra (AI DETECTIONS EGGPLANT LEAF). Semua hak dilindungi.</p>
   
   <p>
-    <a href="#top">⬆️ Kembali ke Atas</a> •
+    <a href="#top">Kembali ke Atas</a> •
     <a href="https://github.com/sambatawa/Terra-Sm5Pro">📁 Source Code</a> •
-    <a href="https://docs.terra-pro5.com">📖 Dokumentasi</a>
+    <a href="https://docs.terra-pro5.com">Dokumentasi</a>
   </p>
 </div>
