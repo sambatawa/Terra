@@ -3,7 +3,6 @@ services:
   - type: web
     name: terra
     plan: free
-    env: php
     rootDir: sistem-terra
     region: singapore
     startCommand: "php artisan serve --host=0.0.0.0 --port=$PORT"
