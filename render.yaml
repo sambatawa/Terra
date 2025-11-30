@@ -6,14 +6,18 @@ services:
     plan: free
     rootDir: sistem-terra
     region: singapore
-    buildCommand: "composer install --no-dev --optimize-autoloader && npm ci --production && npm run build"
     startCommand: "php artisan serve --host=0.0.0.0 --port=$PORT"
+    buildCommand: |
+      composer install --no-dev --optimize-autoloader
+      npm ci --production
+      npm run build
+    startCommand: "vendor/bin/heroku-php-apache2 public/"
     healthCheckPath: /health
     envVars:
       - key: APP_ENV
         value: production
       - key: APP_DEBUG
-        value: false
+        value: "false"
       - key: APP_URL
         value: https://terra.onrender.com
       - key: BACKEND_API_URL
@@ -26,6 +30,8 @@ services:
         value: file
       - key: QUEUE_CONNECTION
         value: sync
+      - key: APP_KEY
+        generateValue: true
 
   # FastAPI Backend Service
   - type: web
