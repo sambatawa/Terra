@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade'); // Siapa penjualnya
             $table->string('name');
+            $table->string('category')->nullable(); // Kategori produk
             $table->text('description');
             $table->integer('price');
             $table->string('image')->nullable(); // Foto produk
@@ -22,10 +23,6 @@ return new class extends Migration
             $table->timestamps();
     });
 
-    // KITA TAMBAH KOLOM ROLE KE TABEL USER DISINI SEKALIAN BIAR CEPET
-    Schema::table('users', function (Blueprint $table) {
-        $table->string('role')->default('petani'); // Default jadi petani
-    });
     }
 
     /**

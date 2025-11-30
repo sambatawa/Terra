@@ -10,18 +10,12 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
-        
-        /* Custom Shadow untuk kesan elegan */
         .elegant-shadow { box-shadow: 0 10px 30px -10px rgba(109, 40, 217, 0.2); }
-        
-        /* Gradien Ungu yang lebih soft untuk teks */
         .text-gradient-soft-purple {
             background: linear-gradient(135deg, #7C3AED 0%, #A855F7 100%); /* Ungu ke Ungu lebih terang */
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
-        
-        /* Gradien untuk tombol */
         .bg-gradient-button {
             background: linear-gradient(135deg, #8B5CF6 0%, #C084FC 100%); /* Ungu ke Lavender */
         }
@@ -179,18 +173,18 @@
                     </div>
                     <div class="p-6">
                         <h4 class="text-xl font-bold text-gray-900">Arya Kusuma Pratama</h4>
-                        <p class="text-purple-700 font-semibold text-sm uppercase tracking-wide mb-3">AI Engineer</p>
+                        <p class="text-purple-700 font-semibold text-sm uppercase tracking-wide mb-3">System Analyst</p>
                         <p class="text-gray-500 text-sm leading-relaxed">J0404231015</p>
                     </div>
                 </div>
 
                 <div class="bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-100">
                     <div class="h-80 w-full overflow-hidden">
-                        <img class="w-full h-full object-cover object-center" src="{{ asset('img/rafi.jpeg') }}">
+                        <img class="w-full h-full object-cover object-center" src="{{ asset('img/inas.jpg') }}">
                     </div>
                     <div class="p-6">
                         <h4 class="text-xl font-bold text-gray-900">Inas Samara Taqia</h4>
-                        <p class="text-purple-700 font-semibold text-sm uppercase tracking-wide mb-3">IoT Specialist</p>
+                        <p class="text-purple-700 font-semibold text-sm uppercase tracking-wide mb-3">Back-End Developer</p>
                         <p class="text-gray-500 text-sm leading-relaxed">J0404231167</p>
                     </div>
                 </div>
@@ -201,7 +195,7 @@
                     </div>
                     <div class="p-6">
                         <h4 class="text-xl font-bold text-gray-900">Muhammad Rafi Riza Pratama</h4>
-                        <p class="text-purple-700 font-semibold text-sm uppercase tracking-wide mb-3">Full Stack Dev</p>
+                        <p class="text-purple-700 font-semibold text-sm uppercase tracking-wide mb-3">Front-End Developer</p>
                         <p class="text-gray-500 text-sm leading-relaxed">J0404231125</p>
                     </div>
                 </div>

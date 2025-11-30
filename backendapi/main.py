@@ -3,34 +3,53 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Optional, Dict, List
-import cv2
-import numpy as np
-from PIL import Image
-import io
+import numpy as np # Masih diperlukan jika ada manipulasi array, tapi bisa dihapus jika tidak ada
+from PIL import Image # Masih diperlukan jika ingin membaca image_bytes, tapi fungsi preprocess_image tidak dipakai
+import io # Masih diperlukan jika ingin membaca image_bytes, tapi fungsi preprocess_image tidak dipakai
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta # Tambah timedelta yang hilang
 import json
-import re
 from pathlib import Path
-import onnxruntime as ort
-from ultralytics import YOLO
 import asyncio
 from dotenv import load_dotenv
 from groq import Groq
 from contextlib import asynccontextmanager
 import firebase_admin
 from firebase_admin import credentials, db as firebase_db
-import traceback, sys, logging
-import base64
+import traceback
 import time
+import re
+
+# --- PENGHAPUSAN: cv2, sys, logging, base64 (tidak digunakan) ---
 
 # --- SENSOR DATA MODEL ---
 class SensorData(BaseModel):
     suhu: float
-    kelembaban: int
+    kelembapan: int
     cahaya: int
     status: str
-    timestamp: str 
+    timestamp: str
+
+# --- GPS DATA MODEL ---
+class GPSData(BaseModel):
+    latitude: float
+    longitude: float
+    accuracy: Optional[float] = None
+    altitude: Optional[float] = None
+    altitude_accuracy: Optional[float] = None
+    heading: Optional[float] = None
+    speed: Optional[float] = None
+    timestamp: str
+    user_id: Optional[str] = None
+
+class GPSDetectionData(BaseModel):
+    gps: GPSData
+    suhu: Optional[float] = None
+    kelembapan: Optional[float] = None
+    cahaya: Optional[float] = None
+    disease: Optional[str] = None
+    confidence: Optional[float] = None
+    timestamp: str
 
 load_dotenv()
 FIREBASE_CONFIG = {"databaseURL": os.getenv("FIREBASE_DATABASE_URL")}
@@ -40,16 +59,17 @@ FIREBASE_DB_URL = FIREBASE_CONFIG["databaseURL"]
 firebase_app = None
 last_firebase_error = None
 
-#INISIALISASI FIREBASE
+# INISIALISASI FIREBASE
 def initialize_firebase():
     global firebase_app, last_firebase_error
     try:
         if firebase_app is not None:
-            print("[FIREBASE] tidak siap")
+            # print("[FIREBASE] tidak siap") # Diubah agar tidak membingungkan
             return
         try:
+            # Cek apakah sudah ada app yang diinisialisasi
             firebase_app = firebase_admin.get_app()
-            print("[FIREBASE] gunakan default")
+            # print("[FIREBASE] gunakan default") # Diubah agar tidak membingungkan
             return
         except ValueError:
             pass
@@ -66,6 +86,7 @@ def initialize_firebase():
         
     except Exception as e:
         try:
+            # Coba ambil app yang sudah ada (untuk kasus error inisialisasi ganda)
             firebase_app = firebase_admin.get_app()
             print("[FIREBASE] gunakan default setelah error")
             last_firebase_error = None
@@ -79,8 +100,8 @@ def initialize_firebase():
 
 initialize_firebase() 
 
-#MAPPING
-CLASS_NAMES_ORIGINAL = ["Aphids", "Cercospora", "Leaf Wilt", "Phytophthora Blight", "Powdery Mildew", "Sehat", "TMV"]
+# MAPPING
+# CLASS_NAMES_ORIGINAL dihapus (tidak digunakan)
 CLASS_NAMES_MAPPED = {
     "Aphids": "aphids",
     "Cercospora": "bercak_cercospora",
@@ -91,51 +112,13 @@ CLASS_NAMES_MAPPED = {
     "TMV": "mosaic_virus"
 }
 
-model_dir = Path(__file__).parent / "model"
-model_dir.mkdir(exist_ok=True)
-ONNX_MODEL_PATH = model_dir / "best.onnx"
-PT_MODEL_PATH = model_dir / "best.pt"
-#INISIALISASI MODEL
-onnx_session = None
-yolo_model = None
-def load_models(force_reload: bool = False):
-    global onnx_session, yolo_model
-    try:
-        print("load_models: ONNX_MODEL_PATH =", ONNX_MODEL_PATH.resolve())
-        if onnx_session is None or force_reload:
-            if ONNX_MODEL_PATH.exists():
-                try:
-                    print(f"Loading ONNX model from {ONNX_MODEL_PATH}")
-                    onnx_session = ort.InferenceSession(str(ONNX_MODEL_PATH), providers=["CPUExecutionProvider"])
-                    print("ONNX model loaded")
-                except Exception as e:
-                    print("Error loading ONNX model:", e)
-                    import traceback as _tb; _tb.print_exc()
-                    onnx_session = None
-            else:
-                print(f"ONNX model not found at {ONNX_MODEL_PATH} — place your .onnx file there")
-        if yolo_model is None or force_reload:
-            if PT_MODEL_PATH.exists():
-                try:
-                    print(f"Loading PyTorch YOLO model from {PT_MODEL_PATH}")
-                    yolo_model = YOLO(str(PT_MODEL_PATH))
-                    print("PyTorch YOLO model loaded")
-                except Exception as e:
-                    print("Error loading PyTorch YOLO model:", e)
-                    import traceback as _tb; _tb.print_exc()
-                    yolo_model = None
-            else:
-                print(f"PyTorch model not found at {PT_MODEL_PATH} — skipping PT load")
-    except Exception as e:
-        print("Error loading models (outer):", e)
-        import traceback as _tb; _tb.print_exc()
-        
+# Variabel ONNX dihapus
+# Fungsi preprocess_image dihapus (tidak digunakan)
+
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
 GROQ_ENABLED = bool(GROQ_API_KEY)
-if GROQ_ENABLED and Groq is not None:
-    groq_client = Groq(api_key=GROQ_API_KEY)
-else:
-    groq_client = None
+groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_ENABLED and Groq is not None else None
+
 
 def get_fallback_explanation(disease_name: str, confidence: float) -> Dict[str, str]:
     expert_knowledge = {
@@ -169,9 +152,27 @@ def get_fallback_explanation(disease_name: str, confidence: float) -> Dict[str, 
         }
     }
     return expert_knowledge.get(disease_name, {
-        "ciri": f"Penyakit {disease_name} terdeteksi dengan keyakinan {confidence:.0%}.",
+        "ciri": f"Penyakit {disease_name} terdeteksi dengan keyakinan {confidence:.0%} (data fallback).",
         "rekomendasi_penanganan": "Konsultasikan dengan ahli pertanian untuk diagnosis dan penanganan lebih lanjut."
     })
+
+def calculate_dominant_percentage(disease_counts: Dict[str, int]) -> float:
+    """
+    Menghitung persentase penyakit dominan dari total penyakit terdeteksi
+    """
+    if not disease_counts:
+        return 0.0
+    
+    total_detections = sum(disease_counts.values())
+    if total_detections == 0:
+        return 0.0
+    
+    # Cari penyakit dengan jumlah terbanyak
+    dominant_count = max(disease_counts.values()) if disease_counts else 0
+    
+    # Hitung persentase
+    percentage = (dominant_count / total_detections) * 100
+    return round(percentage, 2)
 
 async def get_ai_explanation(disease_name: str, confidence: float) -> Dict[str, str]:
     if GROQ_ENABLED and groq_client:
@@ -187,12 +188,11 @@ async def get_ai_explanation(disease_name: str, confidence: float) -> Dict[str, 
             }
             disease_desc = disease_descriptions.get(disease_name, disease_name)
             prompt = f"""Sebagai ahli pertanian, berikan penjelasan detail tentang {disease_desc} yang terdeteksi dengan tingkat keyakinan {confidence:.0%}.
+                Berikan respons dalam format JSON dengan dua field:
+                1. "ciri": uraian rinci ciri-ciri visual dalam 4–6 kalimat.
+                2. "rekomendasi_penanganan": langkah penanganan terstruktur dalam 4–6 kalimat.
 
-                        Berikan respons dalam format JSON dengan dua field:
-                        1. "ciri": uraian rinci ciri-ciri visual dalam 4–6 kalimat.
-                        2. "rekomendasi_penanganan": langkah penanganan terstruktur dalam 4–6 kalimat.
-
-                        Gunakan bahasa Indonesia yang mudah dipahami petani."""
+                Gunakan bahasa Indonesia yang mudah dipahami petani."""
             response = groq_client.chat.completions.create(
                 model="llama-3.1-8b-instant",
                 messages=[
@@ -205,25 +205,61 @@ async def get_ai_explanation(disease_name: str, confidence: float) -> Dict[str, 
             )
             content = response.choices[0].message.content or ""
             txt = content.strip()
-            if txt.startswith("```"):
-                parts = txt.split("```")
-                if len(parts) >= 3:
-                    inner = parts[1]
-                    if inner.strip().lower().startswith("json") and len(parts) >= 3:
-                        txt = parts[2].strip()
-                    else:
-                        txt = inner.strip()
+            
+            # Parsing output Groq, menangani code fence dan non-JSON chars
             start = txt.find("{")
             end = txt.rfind("}")
             candidate = txt[start:end+1] if start != -1 and end != -1 and end > start else txt
+            
+            # Coba hapus markdown code fence jika ada
+            if candidate.startswith("```json"):
+                candidate = candidate[len("```json"):].strip()
+            if candidate.endswith("```"):
+                candidate = candidate[:-len("```")].strip()
+
             try:
                 info = json.loads(candidate)
-            except Exception:
-                try:
-                    info = json.loads(candidate.replace("'", '"'))
-                except Exception as e2:
-                    print("[WARNING] Gagal parsing output Groq: {}".format(e2))
-                    raise
+            except Exception as e:
+                print("[DEBUG] Original JSON error: {}".format(e))
+                print("[DEBUG] Raw candidate: {}".format(candidate[:500]))
+                
+                # Multiple fix attempts
+                fixes = [
+                    # Fix 1: Basic quote escaping
+                    lambda x: x.replace("'", '"').replace('"', '\\"').replace('\\\\"', '\\"'),
+                    
+                    # Fix 2: Regex-based quote fixing for JSON values
+                    lambda x: re.sub(r'(\"[^\"]*)\"([^\"]*\":)', r'\1\\\\"\2', x),
+                    
+                    # Fix 3: Remove problematic characters and normalize
+                    lambda x: re.sub(r'[\x00-\x1f\x7f-\x9f]', '', x).replace('\n', ' ').replace('\r', ''),
+                    
+                    # Fix 4: Handle multiline JSON
+                    lambda x: '\\'.join(line.strip() for line in x.split('\n') if line.strip()),
+                    
+                    # Fix 5: Aggressive comma and whitespace fixing
+                    lambda x: re.sub(r',\s*([}\]])', r'\1', re.sub(r'\s+', ' ', x))
+                ]
+                
+                for i, fix_func in enumerate(fixes):
+                    try:
+                        fixed = fix_func(candidate)
+                        # Additional safety fixes
+                        fixed = re.sub(r',\s*}', '}', fixed)  # Trailing commas
+                        fixed = re.sub(r',\s*]', ']', fixed)  # Trailing commas in arrays
+                        fixed = re.sub(r'\n\s*', ' ', fixed)  # Remove newlines
+                        fixed = re.sub(r'\s+', ' ', fixed)  # Normalize whitespace
+                        
+                        print("[DEBUG] Attempt {} with fix: {}".format(i+1, fixed[:200]))
+                        info = json.loads(fixed)
+                        print("[SUCCESS] Parsed with attempt {}".format(i+1))
+                        break
+                    except Exception as fix_error:
+                        print("[DEBUG] Attempt {} failed: {}".format(i+1, fix_error))
+                        if i == len(fixes) - 1:  # Last attempt
+                            print("[WARNING] Gagal parsing output Groq: {} | Original: {}".format(fix_error, e))
+                            print("[DEBUG] Final candidate JSON: {}".format(candidate[:500]))
+                            return get_fallback_explanation(disease_name, confidence)
             return {
                 "ciri": info.get("ciri", ""),
                 "rekomendasi_penanganan": info.get("rekomendasi_penanganan", "")
@@ -232,200 +268,22 @@ async def get_ai_explanation(disease_name: str, confidence: float) -> Dict[str, 
             print("[WARNING] Gagal memanggil Groq: {}".format(e))
     return get_fallback_explanation(disease_name, confidence)
 
-
-def preprocess_image(image_bytes: bytes) -> np.ndarray:
-    image = Image.open(io.BytesIO(image_bytes))
-    image = image.convert('RGB')
-    image_np = np.array(image)
-    return image_np
-
-def predict_with_onnx(image: np.ndarray) -> List[Dict]:
-    global onnx_session, yolo_model
-    if onnx_session is None:
-        load_models(force_reload=False)
-        if onnx_session is None:
-            if yolo_model is not None:
-                return predict_with_yolo(image)
-            raise HTTPException(status_code=500, detail="ONNX model ga jalan (tried {})".format(ONNX_MODEL_PATH.resolve()))
-
-    img_resized = cv2.resize(image, (640, 640))
-    img_rgb = img_resized
-    img_normalized = img_rgb.astype(np.float32) / 255.0
-    img_transposed = np.transpose(img_normalized, (2, 0, 1))
-    img_batch = np.expand_dims(img_transposed, axis=0).astype(np.float32)
-    input_name = onnx_session.get_inputs()[0].name
-    outputs = onnx_session.run(None, {input_name: img_batch})
-
-    preds = outputs[0]
-    preds = np.squeeze(preds)
-    if preds.ndim == 2 and preds.shape[0] in (11, 12):
-        preds = preds.T
-    elif preds.ndim == 3:
-        preds = np.squeeze(preds)
-        if preds.ndim == 2 and preds.shape[0] in (11, 12):
-            preds = preds.T
-
-    if preds.ndim != 2 or preds.shape[1] < 6:
-        return []
-
-    conf_thresh = 0.5
-    iou_thresh = 0.5
-
-    x_center = preds[:, 0]
-    y_center = preds[:, 1]
-    width = preds[:, 2]
-    height = preds[:, 3]
-    obj_conf = preds[:, 4]
-    n_cols = preds.shape[1]
-    class_scores_all = preds[:, 5:n_cols]
-
-    if class_scores_all.size == 0:
-        return []
-
-    class_ids = np.argmax(class_scores_all, axis=1)
-    class_scores = class_scores_all[np.arange(class_scores_all.shape[0]), class_ids]
-    scores = class_scores * obj_conf
-
-    keep_basic = scores >= conf_thresh
-    x_center = x_center[keep_basic]
-    y_center = y_center[keep_basic]
-    width = width[keep_basic]
-    height = height[keep_basic]
-    scores = scores[keep_basic]
-    class_ids = class_ids[keep_basic]
-
-    if x_center.size == 0:
-        return []
-
-    x1 = x_center - width / 2.0
-    y1 = y_center - height / 2.0
-    x2 = x_center + width / 2.0
-    y2 = y_center + height / 2.0
-
-    def nms_numpy(boxes_xyxy: np.ndarray, sc: np.ndarray, thr: float) -> List[int]:
-        if boxes_xyxy.size == 0:
-            return []
-        x1b = boxes_xyxy[:, 0]
-        y1b = boxes_xyxy[:, 1]
-        x2b = boxes_xyxy[:, 2]
-        y2b = boxes_xyxy[:, 3]
-        areas = (x2b - x1b) * (y2b - y1b)
-        order = sc.argsort()[::-1]
-        keep_idx = []
-        while order.size > 0:
-            i = int(order[0])
-            keep_idx.append(i)
-            if order.size == 1:
-                break
-            xx1 = np.maximum(x1b[i], x1b[order[1:]])
-            yy1 = np.maximum(y1b[i], y1b[order[1:]])
-            xx2 = np.minimum(x2b[i], x2b[order[1:]])
-            yy2 = np.minimum(y2b[i], y2b[order[1:]])
-            w = np.maximum(0.0, xx2 - xx1)
-            h = np.maximum(0.0, yy2 - yy1)
-            inter = w * h
-            iou = inter / (areas[i] + areas[order[1:]] - inter + 1e-6)
-            remain = np.where(iou <= thr)[0]
-            order = order[remain + 1]
-        return keep_idx
-
-    detections = []
-    max_boxes = 100
-    for cls in np.unique(class_ids):
-        cls_name = CLASS_NAMES_ORIGINAL[cls] if cls < len(CLASS_NAMES_ORIGINAL) else f"class_{int(cls)}"
-        mapped_name = CLASS_NAMES_MAPPED.get(cls_name, cls_name.lower())
-
-        idx = np.where(class_ids == cls)[0]
-        boxes_cls = np.stack([x1[idx], y1[idx], x2[idx], y2[idx]], axis=1)
-        scores_cls = scores[idx]
-        keep = nms_numpy(boxes_cls, scores_cls, iou_thresh)
-        for k in keep:
-            i = idx[k]
-            cx = float((boxes_cls[k, 0] + boxes_cls[k, 2]) / 2.0)
-            cy = float((boxes_cls[k, 1] + boxes_cls[k, 3]) / 2.0)
-            w = float(boxes_cls[k, 2] - boxes_cls[k, 0])
-            h = float(boxes_cls[k, 3] - boxes_cls[k, 1])
-            conf_val = float(scores_cls[k])
-            detections.append({
-                "class": mapped_name,
-                "confidence": conf_val,
-                "bbox": [cx, cy, w, h]
-            })
-            if len(detections) >= max_boxes:
-                break
-        if len(detections) >= max_boxes:
-            break
-
-    return detections
-
-def predict_with_yolo(image: np.ndarray) -> List[Dict]:
-    global yolo_model
-    if yolo_model is None:
-        raise HTTPException(status_code=500, detail="YOLO model ga jalan")
-    try:
-        results = yolo_model.predict(source=image, imgsz=640, conf=0.5, iou=0.5, verbose=False)
-        detections = []
-        if len(results) == 0:
-            return detections
-        r = results[0]
-        boxes = getattr(r, "boxes", None)
-        if boxes is None:
-            return detections
-        xywh = getattr(boxes, "xywh", None)
-        confs = getattr(boxes, "conf", None)
-        classes = getattr(boxes, "cls", None)
-        n = len(boxes)
-        for i in range(n):
-            try:
-                bb = xywh[i].cpu().numpy() if hasattr(xywh[i], "cpu") else np.array(xywh[i])
-                x_center, y_center, width, height = float(bb[0]), float(bb[1]), float(bb[2]), float(bb[3])
-            except Exception:
-                continue
-            conf = float(confs[i]) if confs is not None else 0.0
-            class_id = int(classes[i]) if classes is not None else 0
-            class_name = CLASS_NAMES_ORIGINAL[class_id] if class_id < len(CLASS_NAMES_ORIGINAL) else f"class_{class_id}"
-            mapped_name = CLASS_NAMES_MAPPED.get(class_name, class_name.lower())
-            detections.append({
-                "class": mapped_name,
-                "confidence": float(conf),
-                "bbox": [float(x_center), float(y_center), float(width), float(height)]
-            })
-        return detections
-    except Exception as e:
-        print("predict_with_yolo error:", e)
-        import traceback as _tb
-        _tb.print_exc()
-        raise HTTPException(status_code=500, detail="YOLO fallback gagal")
-
-
-async def process_detection(image_bytes: bytes, sensor_data: Optional[Dict] = None) -> Dict:
-    image = preprocess_image(image_bytes)
-    detections = predict_with_onnx(image)
+# process_detection: Fungsi ini dipertahankan karena digunakan di /detect, namun isinya diubah 
+# karena inferensi dilakukan di client-side.
+async def process_detection(sensor_data: Optional[Dict] = None) -> Dict:
+    # Server-side processing disabled - using client-side detection
+    
+    # Default to healthy since server doesn't process detections
     detection_counts = {
         "layu_fusarium": 0, "bercak_cercospora": 0, "mosaic_virus": 0, "aphids": 0,
-        "phytophthora_blight": 0, "powdery_mildew": 0, "sehat": 0
+        "phytophthora_blight": 0, "powdery_mildew": 0, "sehat": 1  # Default to healthy
     }
-    confidences_by_class = {k: [] for k in detection_counts.keys()}
     
-    for det in detections:
-        class_name = det["class"]
-        if class_name in detection_counts:
-            detection_counts[class_name] += 1
-            confidences_by_class[class_name].append(det["confidence"])
-    disease_classes = {k: v for k, v in detection_counts.items() if k != "sehat"}
+    dominan_disease = "sehat"
+    dominan_confidence_avg = 0.0
+    status = "sehat"
     
-    if not any(disease_classes.values()):
-        dominan_disease = "sehat"
-        dominan_confidence_avg = np.mean(confidences_by_class["sehat"]) if confidences_by_class["sehat"] else 0.0
-    else:
-        dominan_disease = max(disease_classes, key=disease_classes.get)
-        dominan_confidence_avg = np.mean(confidences_by_class[dominan_disease]) if confidences_by_class[dominan_disease] else 0.0
-    
-    status = "sehat" if dominan_disease == "sehat" else "tidak sehat"
-    
-    dominan_confidence_avg = float(dominan_confidence_avg)
     info = await get_ai_explanation(dominan_disease, dominan_confidence_avg)
-    sample_image_url = f"/snapshots/snapshot_{datetime.now(timezone.utc).isoformat().replace(':', '-')}.jpg"
     result = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "dominan_disease": dominan_disease,
@@ -433,14 +291,13 @@ async def process_detection(image_bytes: bytes, sensor_data: Optional[Dict] = No
         "jumlah_disease_terdeteksi": detection_counts,
         "sensor_rata_rata": sensor_data,
         "status": status,
-        "sample_image": sample_image_url,
         "info": info
     }
     return result
 
 last_save_time = datetime.min.replace(tzinfo=timezone.utc)
 SAVE_INTERVAL_SECONDS = 30 
-#SIMPAN DETEKSI 30S
+# SIMPAN DETEKSI 30S
 async def save_detection_result(result: Dict, user_id: Optional[str] = None):
     try:
         if firebase_app is None:
@@ -456,8 +313,6 @@ async def save_detection_result(result: Dict, user_id: Optional[str] = None):
             ref = firebase_db.reference(ref_path)
             ref.child(ts_key).set(result)
             return ts_key
-            
-
         key = await loop.run_in_executor(None, _push)
         print(f"[SAVE] simpan berhasil ke firebase: {user_id}/{key}")
         return {"ok": True, "key": str(key)}
@@ -467,61 +322,165 @@ async def save_detection_result(result: Dict, user_id: Optional[str] = None):
         traceback.print_exc()
         return {"ok": False, "reason": str(e)}
 
-def fetch_detections_from_firebase(limit: int = 100) -> List[Dict]:
+def get_latest_sensor_data_from_firebase() -> Optional[Dict]:
     if firebase_app is None:
-        raise HTTPException(status_code=500, detail="Firebase belum inisialisasi uyy")
+        return None
     try:
+        # Order by key (timestamp) dan ambil yang terakhir
+        root = firebase_db.reference("sensor_data").order_by_key().limit_to_last(1).get()
+        if not root or len(root) == 0:
+            print("[SENSOR] No sensor data found in Firebase")
+            return None
+        
+        # Ambil data dari key terakhir
+        latest_key = list(root.keys())[0]
+        latest_data = root[latest_key]
+        
+        # print(f"[SENSOR] Latest sensor data: {latest_data}") # Hapus log berulang
+        
+        return {
+            "suhu": float(latest_data.get("suhu", 26.9)),
+            "kelembapan": int(latest_data.get("kelembapan", 83)),
+            "cahaya": int(latest_data.get("cahaya", 42))
+        }
+    except Exception as e:
+        print(f"[SENSOR] Error fetching sensor data dari Firebase: {e}")
+        import traceback as _tb
+        _tb.print_exc()
+        return None
+
+def count_detections_last_30_seconds() -> Dict[str, int]:
+    """Count detections untuk setiap disease class dalam 30 detik terakhir"""
+    # Catatan: Fungsi ini mengambil semua data 'detections' dari root, yang bisa lambat.
+    # Sebaiknya gunakan order_by_key().start_at() jika struktur Firebase mengizinkan.
+    if firebase_app is None:
+        print("[COUNT] Firebase not available, returning default counts")
+        return {
+            'aphids': 0, 'bercak_cercospora': 0, 'layu_fusarium': 0,
+            'mosaic_virus': 0, 'phytophthora_blight': 0, 'powdery_mildew': 0, 'sehat': 0
+        }
+    
+    try:
+        # Ambil detections dari 30 detik terakhir
+        now = datetime.now(timezone.utc)
+        thirty_seconds_ago = now - timedelta(seconds=30)
+        
+        # NOTE: Ini adalah operasi yang sangat lambat jika data 'detections' besar!
+        # Mengambil seluruh data 'detections' dari root.
         root = firebase_db.reference("detections").get()
         if not root:
-            return []
-        flattened = []
+            return {
+                'aphids': 0, 'bercak_cercospora': 0, 'layu_fusarium': 0,
+                'mosaic_virus': 0, 'phytophthora_blight': 0, 'powdery_mildew': 0, 'sehat': 0
+            }
+        
+        # Count per disease class
+        counts = {
+            'aphids': 0, 'bercak_cercospora': 0, 'layu_fusarium': 0,
+            'mosaic_virus': 0, 'phytophthora_blight': 0, 'powdery_mildew': 0, 'sehat': 0
+        }
+        
         for user_id, entries in root.items():
             if not isinstance(entries, dict):
                 continue
             for ts_key, data in entries.items():
-                ts_iso = data.get("timestamp", datetime.min.isoformat())
+                ts_str = data.get("timestamp", "")
+                if not ts_str:
+                    continue
+                        
+                try:
+                    # Parse timestamp dari Firebase
+                    # Menghilangkan 'Z' dan menggantinya dengan timezone +00:00 untuk kompatibilitas datetime.fromisoformat
+                    ts = datetime.fromisoformat(ts_str.replace('Z', '+00:00'))
+                    if ts >= thirty_seconds_ago:
+                        disease = data.get("dominan_disease", "sehat")
+                        if disease in counts:
+                            counts[disease] += 1
+                except Exception as e:
+                    # print(f"[COUNT] Error parsing timestamp {ts_str}: {e}") # Hapus log berulang
+                    continue
+        
+        print(f"[COUNT] 30s counts: {counts}") # Tambah log untuk debugging
+        return counts
+        
+    except Exception as e:
+        print(f"[COUNT] Error counting detections: {e}")
+        import traceback as _tb
+        _tb.print_exc()
+        return {
+            'aphids': 0, 'bercak_cercospora': 0, 'layu_fusarium': 0,
+            'mosaic_virus': 0, 'phytophthora_blight': 0, 'powdery_mildew': 0, 'sehat': 0
+        }
+
+def fetch_detections_from_firebase(limit: int = 100) -> List[Dict]:
+    if firebase_app is None:
+        raise HTTPException(status_code=500, detail="Firebase belum inisialisasi uyy")
+    try:
+        # Mengambil semua data detections (berpotensi lambat)
+        root = firebase_db.reference("detections").get()
+        if not root:
+            return []
+        
+        flattened = []
+        
+        # Handle both list and dictionary structures from Firebase
+        if isinstance(root, list):
+            # If root is a list, treat each item as a detection entry
+            for item in root:
+                if not isinstance(item, dict):
+                    continue
+                
+                # Try to extract timestamp from various possible fields
+                ts_iso = item.get("timestamp", datetime.min.isoformat())
+                
                 flattened.append({
-                    "firebase_key": ts_key,
-                    "user_id": user_id,
+                    "firebase_key": item.get("firebase_key", str(len(flattened))),
+                    "user_id": item.get("user_id", "unknown"),
                     "timestamp": ts_iso,
-                    "dominan_disease": data.get("dominan_disease", data.get("dominan", "")),
-                    "dominan_confidence_avg": data.get("dominan_confidence_avg", 0.0),
-                    "jumlah_disease_terdeteksi": data.get("jumlah_disease_terdeteksi", data.get("class_counts", {})),
-                    "sensor_data": data.get("sensor_rata_rata", data.get("sensor_rata-rata", {})),
-                    "status": data.get("status", ""),
-                    "info": data.get("info", {})
+                    "dominan_disease": item.get("dominant_disease", item.get("dominan", "")),
+                    "jumlah_disease_terdeteksi": item.get("jumlah_disease_terdeteksi", item.get("class_counts", {})),
+                    "sensor_data": item.get("sensor_rata_rata", item.get("sensor_rata-rata", {})),
+                    "status": item.get("status", ""),
+                    "info": item.get("info", {}),
+                    "dominan_confidence_avg": item.get("dominan_confidence_avg", 0)
                 })
         
+        elif isinstance(root, dict):
+            # Original dictionary structure: {user_id: {timestamp_key: data}}
+            for user_id, entries in root.items():
+                if not isinstance(entries, dict):
+                    continue
+                for ts_key, data in entries.items():
+                    if not isinstance(data, dict):
+                        continue
+                    
+                    ts_iso = data.get("timestamp", datetime.min.isoformat())
+                    flattened.append({
+                        "firebase_key": ts_key,
+                        "user_id": user_id,
+                        "timestamp": ts_iso,
+                        "dominan_disease": data.get("dominant_disease", data.get("dominant", "")),
+                        "jumlah_disease_terdeteksi": data.get("jumlah_disease_terdeteksi", data.get("class_counts", {})),
+                        "sensor_data": data.get("sensor_rata_rata", data.get("sensor_rata-rata", {})),
+                        "status": data.get("status", ""),
+                        "info": data.get("info", {}),
+                        "dominan_confidence_avg": data.get("dominan_confidence_avg", 0)
+                    })
+        
+        # Sort by timestamp (newest first) and limit
         flattened.sort(key=lambda x: x.get("timestamp", datetime.min.isoformat()), reverse=True)
         return flattened[:limit]
+        
     except Exception as e:
         print(f"Error fetching deteksi dari Firebase:{e}")
         import traceback as _tb; _tb.print_exc()
         raise HTTPException(status_code=500, detail="Error fetching deteksi dari firebase")
 
-def get_latest_sensor_data_from_firebase() -> Optional[Dict]:
-    if firebase_app is None:
-        return None
-    try:
-        root = firebase_db.reference("sensor_data").get()
-        if not root:
-            return None
-        latest_key = max(root.keys())
-        latest_data = root[latest_key]
-        
-        return {
-            "suhu": latest_data.get("suhu", 26.9),
-            "kelembapan": latest_data.get("kelembaban", 83.5),
-            "cahaya": latest_data.get("cahaya", 42)
-        }
-    except Exception as e:
-        print(f"Error fetching sensor data dari Firebase:{e}")
-        return None
-
 def fetch_detection_by_key(firebase_key: str) -> Optional[Dict]:
     if firebase_app is None:
         raise HTTPException(status_code=500, detail="Firebase belum inisialisasi uyy")
     try:
+        # Mengambil semua data detections (berpotensi lambat)
         root = firebase_db.reference("detections").get()
         if not root:
             return None 
@@ -532,8 +491,7 @@ def fetch_detection_by_key(firebase_key: str) -> Optional[Dict]:
                     "firebase_key": firebase_key,
                     "user_id": user_id,
                     "timestamp": data.get("timestamp", ""),
-                    "dominan_disease": data.get("dominan_disease", data.get("dominan", "")),
-                    "dominan_confidence_avg": data.get("dominan_confidence_avg", 0.0),
+                    "dominan_disease": data.get("dominan_disease", data.get("dominant", "")),
                     "jumlah_disease_terdeteksi": data.get("jumlah_disease_terdeteksi", data.get("class_counts", {})),
                     "sensor_data": data.get("sensor_rata_rata", data.get("sensor_rata-rata", {})),
                     "status": data.get("status", ""),
@@ -547,10 +505,11 @@ def fetch_detection_by_key(firebase_key: str) -> Optional[Dict]:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    load_models() 
-    print("FastAPI Lifespan started.")
+    # load_models() removed
+    print("FastAPI Lifespan started - server-side inference disabled.")
     yield
     print("FastAPI Lifespan shutdown.")
+    
 app = FastAPI(title="Terra YOLOv8 Detection API", version="1.0.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
@@ -560,62 +519,45 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-#ENDPOINTS API
+# --- ENDPOINTS API ---
+
 @app.get("/")
 async def root():
-    return {"message": "Halo ini adalah Terra YOLOv8 Detection API", "status": "active"}
+    return {"message": "Halo ini adalah Terra YOLOv8 Detection", "status": "active"}
 
 @app.get("/health")
 async def health_check():
     model_status = {
-        "onnx_loaded": onnx_session is not None,
-        "yolo_loaded": yolo_model is not None,
+        "onnx_loaded": False,  # Server-side ONNX disabled
         "groq_enabled": GROQ_ENABLED,
         "firebase_initialized": firebase_app is not None
     }
     return {"status": "healthy", "models": model_status}
-
-# ENDPOINT API GROQ
-@app.get("/test-groq")
-async def test_groq():
-    if not GROQ_ENABLED or groq_client is None:
-        return {"status": "error", "message": "GROQ_API_KEY not set or client unavailable"}
-    try:
-        response = groq_client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[{"role": "user", "content": "Sebutkan 2 penyakit tanaman tomat dalam satu kalimat."}],
-            max_tokens=1000
-        )
-        return {
-            "status": "success", 
-            "message": "Groq connection working",
-            "response": response.choices[0].message.content,
-            "model": "llama-3.1-8b-instant"
-        }
-        
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
-
 # ENDPOINT API DETECTION
+# Digunakan untuk simulasi deteksi/mendapatkan info, karena client-side detection sudah memberikan hasil akhir
 @app.post("/detect")
 async def detect_disease(
     background_tasks: BackgroundTasks,
-    file: UploadFile = File(...),
     suhu: Optional[float] = None,
     kelembapan: Optional[float] = None,
     cahaya: Optional[float] = None,
     user_id: Optional[str] = None
 ):
     try:
-        image_bytes = await file.read()
+        # Ambil sensor data dari request atau Firebase
         sensor_data = None
         if suhu is not None or kelembapan is not None or cahaya is not None:
             sensor_data = {
                 "suhu": suhu if suhu is not None else 26.9,
                 "kelembapan": kelembapan if kelembapan is not None else 83.5,
                 "cahaya": cahaya if cahaya is not None else 42
-            }   
-        result = await process_detection(image_bytes, sensor_data)
+            }
+        else:
+            # Fungsi get_latest_sensor_data_from_firebase() dipanggil jika sensor data tidak disertakan
+            sensor_data = get_latest_sensor_data_from_firebase()
+        
+        # NOTE: process_detection selalu mengembalikan 'sehat' karena inferensi di client-side
+        result = await process_detection(sensor_data)
         background_tasks.add_task(save_detection_result, result, user_id=user_id)
         
         return JSONResponse(content=result)
@@ -623,79 +565,72 @@ async def detect_disease(
         import traceback as _tb; _tb.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/detect/realtime")
-async def detect_realtime(
-    file: UploadFile = File(...)
-):
-    try:
-        image_bytes = await file.read()
-        image = preprocess_image(image_bytes)
-        detections = predict_with_onnx(image)
-        formatted_detections = []
-        for det in detections:
-            try:
-                bbox = det.get("bbox")
-                if not bbox or len(bbox) != 4:
-                    continue
-                x_center, y_center, width, height = map(float, bbox)
-                x1 = x_center - width / 2
-                y1 = y_center - height / 2
-                
-                formatted_detections.append({
-                    "class": det.get("class", "unknown"),
-                    "confidence": float(det.get("confidence", 0.0)),
-                    "bbox": {
-                        "x1": float(x1),
-                        "y1": float(y1),
-                        "x2": float(x1 + width),
-                        "y2": float(y1 + height),
-                        "width": float(width),
-                        "height": float(height)
-                    }
-                })
-            except Exception as e_row:
-                logging.error("/detect/realtime - row formatting error: %s\n%s", e_row, traceback.format_exc())
-                continue
-        return JSONResponse(content={"detections": formatted_detections, "timestamp": datetime.now(timezone.utc).isoformat()})
-    except Exception as e:
-        tb = traceback.format_exc()
-        logging.error("/detect/realtime - unhandled exception:\n" + tb)
-        return JSONResponse(status_code=500, content={"error": str(e), "trace": tb})
-
-
 @app.post("/detect/auto")
 async def detect_auto(
     background_tasks: BackgroundTasks,
-    file: UploadFile = File(None),
-    image_base64: Optional[str] = None,
-    suhu: Optional[float] = None,
-    kelembapan: Optional[float] = None,
-    cahaya: Optional[float] = None,
-    save: bool = True
-):    
-    if file is None and not image_base64:
-        raise HTTPException(status_code=400, detail="Gambar gada format base64")
+    data: dict 
+):     
+    suhu = data.get('suhu')
+    kelembapan = data.get('kelembapan')
+    cahaya = data.get('cahaya')
+    save = data.get('save', True)
+    user_id = data.get('user_id')
+    dominan_disease = data.get('dominant_disease', 'sehat')
+    # Gunakan disease_counts dari frontend jika ada, fallback ke default
+    frontend_counts = data.get('disease_counts', {})
+    
+    print(f"[DETECT] Request: disease={dominan_disease}, save={save}")
         
     try:
-        if file is not None:
-            image_bytes = await file.read()
-        else:
-            try:
-                if image_base64 and "," in image_base64:
-                    image_base64 = image_base64.split(",")[1]
-                image_bytes = base64.b64decode(image_base64)
-            except Exception:
-                raise HTTPException(status_code=400, detail="Gagal decode image_base64")
-
-        #AMBIL DARI SENSOR DATA
-        sensor_data = get_latest_sensor_data_from_firebase()
-        if sensor_data is None and any(v is not None for v in (suhu, kelembapan, cahaya)):
+        sensor_data = None
+        # Use Firebase data if any sensor value is null
+        if suhu is not None and kelembapan is not None and cahaya is not None:
             sensor_data = {
-                "suhu": suhu if suhu is not None else 26.9,
-                "kelembapan": kelembapan if kelembapan is not None else 83.5,
-                "cahaya": cahaya if cahaya is not None else 42
+                "suhu": float(suhu),
+                "kelembapan": int(kelembapan),
+                "cahaya": int(cahaya)
             }
-        result = await process_detection(image_bytes, sensor_data)
+        else:
+            sensor_data = get_latest_sensor_data_from_firebase()
+            missing = []
+            if suhu is None: missing.append("suhu")
+            if kelembapan is None: missing.append("kelembapan")
+            if cahaya is None: missing.append("cahaya")
+        default_counts = {
+            'aphids': 0, 'bercak_cercospora': 0, 'layu_fusarium': 0,
+            'mosaic_virus': 0, 'phytophthora_blight': 0, 'powdery_mildew': 0, 'sehat': 0
+        }
+        jumlah_penyakit_terdeteksi = frontend_counts if frontend_counts else default_counts
+        
+        # Hitung dominan_confidence_avg sebagai persentase penyakit dominan
+        dominan_confidence_avg = calculate_dominant_percentage(jumlah_penyakit_terdeteksi)
+        
+        # Fix dominant disease berdasarkan counts terbanyak
+        if jumlah_penyakit_terdeteksi:
+            disease_entries = [(disease, count) for disease, count in jumlah_penyakit_terdeteksi.items() if count > 0]
+            if disease_entries:
+                disease_entries.sort(key=lambda x: x[1], reverse=True)
+                dominan_disease = disease_entries[0][0]
+            else:
+                dominan_disease = "sehat"
+        else:
+            dominan_disease = "sehat"
+        
+        status = "warning" if dominan_disease != "sehat" else "sehat"
+
+        # Ambil info AI/Fallback SETELAH fix dominant disease
+        info = await get_ai_explanation(dominan_disease, dominan_confidence_avg)
+
+        result = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "dominan_disease": dominan_disease,
+            "dominan_confidence_avg": dominan_confidence_avg,
+            "jumlah_disease_terdeteksi": jumlah_penyakit_terdeteksi,
+            "sensor_rata_rata": sensor_data,
+            "status": status,
+            "info": info
+        }
+        
         global last_save_time
         now = datetime.now(timezone.utc)
         
@@ -705,17 +640,17 @@ async def detect_auto(
         if save:
             time_since_last_save = (now - last_save_time).total_seconds()
             if time_since_last_save >= SAVE_INTERVAL_SECONDS:
-                save_res = await save_detection_result(result, user_id="autoSimpan")
+                save_res = await save_detection_result(result, user_id=user_id if user_id else "autoSimpan")
                 saved = bool(save_res and save_res.get("ok"))
                 if saved:
                     last_save_time = now
-                    print("[AUTO SAVE] berhasil. Next simpan {}s lagi.".format(SAVE_INTERVAL_SECONDS))
+                    # print("[AUTO SAVE] berhasil. Next simpan {}s lagi.".format(SAVE_INTERVAL_SECONDS)) # Hapus log berulang
                 else:
                     skip_reason = "save failed: {}".format(save_res.get('reason', 'unknown') if save_res else 'unknown')
                     print("[AUTO SAVE] gagal {}".format(skip_reason))
             else:
-                skip_reason = "save failed: {}".format(save_res.get('reason', 'unknown') if save_res else 'unknown')
-                print("[AUTO SAVE] gagal {}".format(skip_reason))
+                skip_reason = "skipped: only {}s since last save (need {}s)".format(int(time_since_last_save), SAVE_INTERVAL_SECONDS)
+                # print("[AUTO SKIP] {}".format(skip_reason)) # Hapus log berulang
             
         return JSONResponse(content={"saved_this_frame": saved, "result": result, "skip_reason": skip_reason})
         
@@ -771,27 +706,21 @@ async def firebase_test():
 
 @app.post("/sensor/data")
 async def save_sensor_data(sensor_data: SensorData):
-    """Save sensor data from Laravel simulator"""
+    """Save sensor data dari simulator/IoT device"""
     try:
-        print(f"[SENSOR] Received data: {sensor_data}")
+        # print(f"[SENSOR] Received data: {sensor_data}") # Hapus log berulang
         
         # Save ke Firebase sensor_data/{timestamp}
         if firebase_app is not None:
             loop = asyncio.get_running_loop()
             def _save_sensor():
-                timestamp = int(time.time())
+                # Menggunakan integer timestamp sebagai key
+                timestamp = int(time.time()) 
                 ref = firebase_db.reference("sensor_data/" + str(timestamp))
-                return ref.set({
-                    "suhu": sensor_data.suhu,
-                    "kelembaban": sensor_data.kelembaban,
-                    "cahaya": sensor_data.cahaya,
-                    "status": sensor_data.status,
-                    "timestamp": sensor_data.timestamp,
-                    "source": "laravel_simulator"
-                })
+                return ref.set(sensor_data.dict()) # Menggunakan .dict() dari Pydantic
             
             await loop.run_in_executor(None, _save_sensor)
-            print(f"[SENSOR] Saved to sensor_data/{int(time.time())}")
+            # print(f"[SENSOR] Saved to sensor_data/{int(time.time())}") # Hapus log berulang
         
         return JSONResponse(content={
             "success": True,
@@ -811,16 +740,18 @@ async def save_sensor_data(sensor_data: SensorData):
                 "trace": tb
             }
         )
-#ENDPOINT AMBIL DATA SENSOR
+        
+# ENDPOINT AMBIL DATA SENSOR
 @app.get("/sensor/data")
 async def get_sensor_data():
-    """Get latest sensor data from sensor_data"""
+    """Get 10 data sensor terakhir dari sensor_data"""
     try:
         if firebase_app is None:
             return JSONResponse(content={"success": False, "message": "Ga nemu firebasenya"})
         loop = asyncio.get_running_loop()
         def _get_sensor():
-            ref = firebase_db.reference("sensor_data").limit_to_last(10)
+            # order_by_key().limit_to_last(10) untuk data 10 terakhir (berdasarkan timestamp integer key)
+            ref = firebase_db.reference("sensor_data").order_by_key().limit_to_last(10)
             return ref.get()
         data = await loop.run_in_executor(None, _get_sensor)
         
@@ -831,12 +762,15 @@ async def get_sensor_data():
         })
         
     except Exception as e:
-        print(f"[SENSOR] firebase ada, data tidak ada: {e}")
+        print(f"[SENSOR] Error getting sensor data: {e}")
+        import traceback as _tb
+        print(f"[SENSOR] Traceback: {_tb.format_exc()}")
         return JSONResponse(
             status_code=500,
-            content={"success": False, "error": str(e)}
+            content={"success": False, "error": str(e), "trace": _tb.format_exc()}
         )
-#ENDPOINT BACA DATA SENSOR LAST
+
+# ENDPOINT BACA DATA SENSOR AVERAGE
 @app.get("/sensor/average")
 async def get_sensor_average():
     try:
@@ -845,38 +779,45 @@ async def get_sensor_average():
         
         loop = asyncio.get_running_loop()
         def _get_average():
-            ref = firebase_db.reference("sensor_data").limit_to_last(15)
+            # order_by_key().limit_to_last(15) untuk 15 data terakhir
+            ref = firebase_db.reference("sensor_data").order_by_key().limit_to_last(15)
             data = ref.get()
             if not data:
                 return None
             
             suhu_values = []
-            kelembaban_values = []
+            kelembapan_values = []
             cahaya_values = []
             
             for timestamp in data:
                 sensor = data[timestamp]
-                suhu_values.append(float(sensor["suhu"]))
-                kelembaban_values.append(int(sensor["kelembaban"]))
-                cahaya_values.append(int(sensor["cahaya"]))
-            avg_suhu = round(sum(suhu_values) / len(suhu_values), 1)
-            avg_kelembaban = round(sum(kelembaban_values) / len(kelembaban_values))
-            avg_cahaya = round(sum(cahaya_values) / len(cahaya_values))
+                # Pastikan konversi tipe data
+                suhu_values.append(float(sensor.get("suhu", 0)))
+                kelembapan_values.append(int(sensor.get("kelembapan", 0)))
+                cahaya_values.append(int(sensor.get("cahaya", 0)))
+                
+            count = len(suhu_values)
+            if count == 0:
+                return None
+
+            avg_suhu = round(sum(suhu_values) / count, 1)
+            avg_kelembapan = round(sum(kelembapan_values) / count)
+            avg_cahaya = round(sum(cahaya_values) / count)
             
             status = "Normal"
             if avg_suhu > 30.5:
                 status = "Warning - Suhu Tinggi"
-            elif avg_kelembaban < 57:
-                status = "Warning - Kelembaban Rendah"
+            elif avg_kelembapan < 57:
+                status = "Warning - Kelembapan Rendah"
             elif avg_cahaya > 1400:
                 status = "Warning - Cahaya Tinggi"
             return {
                 "suhu": avg_suhu,
-                "kelembaban": avg_kelembaban,
+                "kelembapan": avg_kelembapan,
                 "cahaya": avg_cahaya,
                 "status": status,
-                "readings_count": len(data),
-                "period": "30 seconds",
+                "readings_count": count,
+                "period": "15 readings", # Diubah ke jumlah readings, bukan 30s
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }
         average = await loop.run_in_executor(None, _get_average)
@@ -894,9 +835,11 @@ async def get_sensor_average():
         
     except Exception as e:
         print(f"[SENSOR] Error getting average: {e}")
+        import traceback as _tb
+        print(f"[SENSOR] Traceback: {_tb.format_exc()}")
         return JSONResponse(
             status_code=500,
-            content={"success": False, "error": str(e)}
+            content={"success": False, "error": str(e), "trace": _tb.format_exc()}
         )
 
 if __name__ == "__main__":

@@ -73,7 +73,7 @@
                 </div>
 
                 <div class="hidden lg:block mb-8">
-                    <h2 class="text-3xl font-bold text-gray-900">Buat Akun Baru 🚀</h2>
+                    <h2 class="text-3xl font-bold text-gray-900">Buat Akun Baru</h2>
                     <p class="text-gray-500 mt-2">Lengkapi formulir di bawah ini.</p>
                 </div>
 
@@ -119,6 +119,38 @@
                         </div>
                     </div>
 
+                    <!-- Kode Unik Petani (Hanya muncul jika role = petani) -->
+                    <div id="kodeUnikField" class="hidden">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            <span class="text-red-500">*</span> Kode Unik Petani
+                            <span class="text-xs text-gray-500 ml-2">(Hubungi admin untuk mendapatkan kode)</span>
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7h2a5 5 0 015 5v4a5 5 0 01-5 5h-2m-6 0H7a5 5 0 01-5-5v-4a5 5 0 015-5h2m0 0V3a2 2 0 012-2h2a2 2 0 012 2v4m-6 0V3a2 2 0 012-2h2a2 2 0 012 2v4"></path></svg>
+                            </div>
+                            <input type="text" name="kode_unik" id="kodeUnik" class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl leading-5 bg-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500 sm:text-sm transition uppercase" placeholder="••••••••" maxlength="8" />
+                        </div>
+                        <x-input-error :messages="$errors->get('kode_unik')" class="mt-2" />
+                        <p class="text-xs text-gray-500 mt-1">Kode unik 8 karakter</p>
+                    </div>
+
+                    <!-- Nomor Registrasi Penyuluh (Hanya muncul jika role = penyuluh) -->
+                    <div id="penyuluhField" class="hidden">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            <span class="text-red-500">*</span> Nomor Registrasi Penyuluh
+                            <span class="text-xs text-gray-500 ml-2">(Nomor Sertifikat/ID Penyuluh Pertanian)</span>
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                            </div>
+                            <input type="text" name="nomor_registrasi" id="nomorRegistrasi" class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl leading-5 bg-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500 sm:text-sm transition" placeholder="REG001234" maxlength="20" />
+                        </div>
+                        <x-input-error :messages="$errors->get('nomor_registrasi')" class="mt-2" />
+                        <p class="text-xs text-gray-500 mt-1">Nomor registrasi 10-20 karakter (contoh: REG001234 atau BPP2024)</p>
+                    </div>
+
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Kata Sandi</label>
                         <div class="relative">
@@ -158,5 +190,40 @@
             </div>
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const roleSelect = document.querySelector('select[name="role"]');
+            const kodeUnikField = document.getElementById('kodeUnikField');
+            const kodeUnikInput = document.getElementById('kodeUnik');
+            const penyuluhField = document.getElementById('penyuluhField');
+            const nomorRegistrasiInput = document.getElementById('nomorRegistrasi');
+
+            function toggleValidationFields() {
+                // Reset all fields
+                kodeUnikField.classList.add('hidden');
+                kodeUnikInput.required = false;
+                kodeUnikInput.value = '';
+                
+                penyuluhField.classList.add('hidden');
+                nomorRegistrasiInput.required = false;
+                nomorRegistrasiInput.value = '';
+
+                // Show relevant field based on role
+                if (roleSelect.value === 'petani') {
+                    kodeUnikField.classList.remove('hidden');
+                    kodeUnikInput.required = true;
+                } else if (roleSelect.value === 'penyuluh') {
+                    penyuluhField.classList.remove('hidden');
+                    nomorRegistrasiInput.required = true;
+                }
+                // penjual tidak perlu validasi khusus
+            }
+            toggleValidationFields();
+
+            // Listen for changes
+            roleSelect.addEventListener('change', toggleValidationFields);
+        });
+    </script>
 </body>
 </html>

@@ -32,44 +32,44 @@
                             Marketplace
                         </a>
 
-                        <a href="{{ route('history') }}" class="px-4 py-2 rounded-md text-base font-semibold transition {{ request()->routeIs('history') ? 'bg-purple-800 text-white' : 'text-purple-200 hover:bg-purple-800 hover:text-white' }}">
+                        <a href="{{ route('history') }}" class="px-4 py-2 rounded-md text-base font-medium transition {{ request()->routeIs('history') ? 'bg-purple-800 text-white' : 'text-purple-200 hover:bg-purple-800 hover:text-white' }}">
                             Riwayat
                         </a>
-                        <a href="{{ route('reports.index') }}" class="px-4 py-2 rounded-md text-base font-semibold transition {{ request()->routeIs('reports.index') ? 'bg-red-600 text-white' : 'text-red-200 hover:bg-red-700 hover:text-white' }}">
+                        <a href="{{ route('reports.index') }}" class="px-4 py-2 rounded-md text-base font-medium transition {{ request()->routeIs('reports.index') ? 'bg-red-600 text-white' : 'text-red-200 hover:bg-red-700 hover:text-white' }}">
                             Lapor Masalah
                         </a>
                     @endif
 
                     @if(Auth::user()->role == 'penjual')
-                        <a href="{{ route('marketplace') }}" class="px-4 py-2 rounded-md text-base font-bold transition {{ request()->routeIs('marketplace') ? 'bg-purple-800 text-white' : 'text-purple-200 hover:bg-purple-800 hover:text-white' }}">
+                        <a href="{{ route('marketplace') }}" class="px-4 py-2 rounded-md text-base font-medium transition {{ request()->routeIs('marketplace') ? 'bg-purple-800 text-white' : 'text-purple-200 hover:bg-purple-800 hover:text-white' }}">
                             Kelola Produk
                         </a>
-                        <a href="{{ route('history') }}" class="px-4 py-2 rounded-md text-base font-bold transition {{ request()->routeIs('history') ? 'bg-purple-800 text-white' : 'text-purple-200 hover:bg-purple-800 hover:text-white' }}">
+                        <a href="{{ route('history') }}" class="px-4 py-2 rounded-md text-base font-medium transition {{ request()->routeIs('history') ? 'bg-purple-800 text-white' : 'text-purple-200 hover:bg-purple-800 hover:text-white' }}">
                             Statistik
                         </a>
-                        <a href="{{ route('forum') }}" class="px-4 py-2 rounded-md text-base font-bold transition {{ request()->routeIs('forum') ? 'bg-purple-800 text-white' : 'text-purple-200 hover:bg-purple-800 hover:text-white' }}">
+                        <a href="{{ route('forum') }}" class="px-4 py-2 rounded-md text-base font-medium transition {{ request()->routeIs('forum') ? 'bg-purple-800 text-white' : 'text-purple-200 hover:bg-purple-800 hover:text-white' }}">
                             Forum
                         </a>
                     @endif
 
                     @if(Auth::user()->role == 'teknisi')
-                        <a href="{{ route('reports.index') }}" class="relative px-4 py-2 rounded-md text-base font-bold transition {{ request()->routeIs('reports.index') ? 'bg-purple-800 text-white' : 'text-purple-200 hover:bg-purple-800 hover:text-white' }}">
+                        <a href="{{ route('reports.index') }}" class="relative px-4 py-2 rounded-md text-base font-medium transition {{ request()->routeIs('reports.index') ? 'bg-purple-800 text-white' : 'text-purple-200 hover:bg-purple-800 hover:text-white' }}">
                             Tiket Masuk
                             <span class="absolute top-1 right-1 h-2.5 w-2.5 rounded-full bg-red-500 animate-ping"></span>
                         </a>
-                        <a href="{{ route('admin.users') }}" class="px-4 py-2 rounded-md text-base font-bold transition {{ request()->routeIs('admin.users') ? 'bg-purple-800 text-white' : 'text-purple-200 hover:bg-purple-800 hover:text-white' }}">
+                        <a href="{{ route('admin.users') }}" class="px-4 py-2 rounded-md text-base font-medium transition {{ request()->routeIs('admin.users') ? 'bg-purple-800 text-white' : 'text-purple-200 hover:bg-purple-800 hover:text-white' }}">
                             Manajemen User
                         </a>
-                        <a href="{{ route('forum') }}" class="px-4 py-2 rounded-md text-base font-bold transition {{ request()->routeIs('forum') ? 'bg-purple-800 text-white' : 'text-purple-200 hover:bg-purple-800 hover:text-white' }}">
+                        <a href="{{ route('forum') }}" class="px-4 py-2 rounded-md text-base font-medium transition {{ request()->routeIs('forum') ? 'bg-purple-800 text-white' : 'text-purple-200 hover:bg-purple-800 hover:text-white' }}">
                             Forum
                         </a>
                     @endif
 
                     @if(Auth::user()->role == 'penyuluh')
-                        <a href="{{ route('forum') }}" class="px-4 py-2 rounded-md text-base font-bold transition {{ request()->routeIs('forum') ? 'bg-purple-800 text-white' : 'text-purple-200 hover:bg-purple-800 hover:text-white' }}">
+                        <a href="{{ route('forum') }}" class="px-4 py-2 rounded-md text-base font-medium transition {{ request()->routeIs('forum') ? 'bg-purple-800 text-white' : 'text-purple-200 hover:bg-purple-800 hover:text-white' }}">
                             Forum
                         </a>
-                        <a href="{{ route('history') }}" class="px-4 py-2 rounded-md text-base font-bold transition {{ request()->routeIs('history') ? 'bg-purple-800 text-white' : 'text-purple-200 hover:bg-purple-800 hover:text-white' }}">
+                        <a href="{{ route('history') }}" class="px-4 py-2 rounded-md text-base font-medium transition {{ request()->routeIs('history') ? 'bg-purple-800 text-white' : 'text-purple-200 hover:bg-purple-800 hover:text-white' }}">
                             Aktivitas
                         </a>
                     @endif

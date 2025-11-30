@@ -31,6 +31,9 @@
         </div>
         <script>
             window.ROBOT_API_URL = 'http://localhost:8001';
+            @auth
+                window.authUserId = '{{ Auth::user()->id }}';
+            @endauth
         </script>
         <script src="{{ asset('js/sensor-simulator.js') }}"></script>
     </body>

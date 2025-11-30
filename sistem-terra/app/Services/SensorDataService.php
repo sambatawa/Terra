@@ -20,13 +20,13 @@ class SensorDataService
         if ($randomSuhu > 30.5) {
             $statusSensor = 'Warning - Suhu Tinggi';
         } elseif ($randomHum < 57) {
-            $statusSensor = 'Warning - Kelembaban Rendah';
+            $statusSensor = 'Warning - Kelembapan Rendah';
         } elseif ($randomLux > 1400) {
             $statusSensor = 'Warning - Cahaya Tinggi';
         }
         return [
             'suhu' => $randomSuhu,
-            'kelembaban' => $randomHum,
+            'kelembapan' => $randomHum,
             'cahaya' => $randomLux,
             'status' => $statusSensor,
             'timestamp_sensor' => Carbon::now()->format('Y-m-d H:i:s')
@@ -97,7 +97,7 @@ class SensorDataService
             
             return [
                 'suhu' => $latestData['suhu'] ?? 0,
-                'kelembaban' => $latestData['kelembaban'] ?? 0,
+                'kelembapan' => $latestData['kelembapan'] ?? 0,
                 'cahaya' => $latestData['cahaya'] ?? 0,
                 'status' => $latestData['status'] ?? 'Normal',
                 'timestamp' => $latestKey,
@@ -159,7 +159,7 @@ class SensorDataService
                 if ($frontendSensorData) {
                     $latestSensorData = [
                         'suhu' => $frontendSensorData['suhu'] ?? 28.5,
-                        'kelembaban' => $frontendSensorData['kelembaban'] ?? 60,
+                        'kelembapan' => $frontendSensorData['kelembapan'] ?? 60,
                         'cahaya' => $frontendSensorData['cahaya'] ?? 1000,
                         'status' => $frontendSensorData['status'] ?? 'Normal',
                         'readings_count' => 1,
@@ -169,7 +169,7 @@ class SensorDataService
                 } else {
                     $latestSensorData = [
                         'suhu' => 28.5,
-                        'kelembaban' => 60,
+                        'kelembapan' => 60,
                         'cahaya' => 1000,
                         'status' => 'Normal',
                         'readings_count' => 1,
@@ -181,7 +181,7 @@ class SensorDataService
             $sensorData = [
                 'sensor_rata_rata' => [
                     'suhu' => $latestSensorData['suhu'],
-                    'kelembapan' => $latestSensorData['kelembaban'],
+                    'kelembapan' => $latestSensorData['kelembapan'],
                     'cahaya' => $latestSensorData['cahaya'],
                     'status' => $latestSensorData['status'],
                     'updated_at' => Carbon::now()->toISOString()
@@ -246,9 +246,7 @@ class SensorDataService
                 'message' => "Updated {$updatedCount} detections with sensor data",
                 'sensor_data_used' => $latestSensorData
             ];
-            
             Log::info('Sensor data update completed', $result);
-            
             return $result;
             
         } catch (\Exception $e) {
