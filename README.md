@@ -1,5 +1,4 @@
 <div align="center">
-   <img src="https://raw.github.com/sambatawa/Terra-Sm5Pro/main/sistem-terra/public/img/logo.png" alt="Terra Ecosystem" width="400">
   <h1>Terra</h1>
   <p><strong>Monitoring dan AI Detection Disease menggunakan Eggplant Leaf</strong></p>
   
@@ -161,28 +160,7 @@ Data Format: JSON
 Storage: Firebase Realtime Database
 ```
 
-## Security & Authentication
-
-### Laravel Authentication
-- **Breeze Stack**: Laravel Breeze dengan Blade templates
-- **Email Verification**: Required untuk account activation
-- **Session Management**: Secure session handling
-- **CSRF Protection**: Built-in CSRF token validation
-- **Password Hashing**: bcrypt dengan proper salting
-
-### Firebase Security
-- **Service Account**: Private key authentication
-- **Database Rules**: Role-based data access
-- **API Key Restrictions**: Limited ke specific domains
-- **Data Validation**: Client & server-side validation
-
-### API Security
-- **Rate Limiting**: Prevent abuse dan DDoS
-- **CORS Configuration**: Proper cross-origin setup
-- **Input Validation**: Comprehensive data sanitization
-- **Error Handling**: Secure error responses
-
-## 🌐 Deployment Guide
+## Deployment Guide
 
 ### Development Environment
 ```bash
@@ -216,7 +194,7 @@ APP_DEBUG=false
 
 ```
 
-## 🧪 Testing & Quality Assurance
+## Testing & Quality Assurance
 
 ### Laravel Testing
 ```bash
