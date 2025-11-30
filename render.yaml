@@ -1,0 +1,44 @@
+services:
+  # Laravel Frontend Service
+  - type: web
+    name: terra
+    env: php
+    plan: free
+    runtime: php-8.2
+    rootDir: sistem-terra
+    buildCommand: "composer install --no-dev --optimize-autoloader && npm ci --production && npm run build"
+    startCommand: "php artisan serve --host=0.0.0.0 --port=$PORT"
+    healthCheckPath: /health
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: APP_URL
+        value: https://terra.onrender.com
+      - key: BACKEND_API_URL
+        value: https://terra-backend.onrender.com
+      - key: LOG_CHANNEL
+        value: errorlog
+      - key: CACHE_DRIVER
+        value: file
+      - key: SESSION_DRIVER
+        value: file
+      - key: QUEUE_CONNECTION
+        value: sync
+
+  # FastAPI Backend Service
+  - type: web
+    name: terra-backend
+    env: python
+    plan: free
+    runtime: python-3.11
+    rootDir: backendapi
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn main:app --host=0.0.0.0 --port=$PORT"
+    healthCheckPath: /health
+    envVars:
+      - key: FRONTEND_URL
+        value: https://terra.onrender.com
+      - key: PYTHON_VERSION
+        value: 3.11.5

@@ -20,8 +20,6 @@ import traceback
 import time
 import re
 
-# --- PENGHAPUSAN: cv2, sys, logging, base64 (tidak digunakan) ---
-
 # --- SENSOR DATA MODEL ---
 class SensorData(BaseModel):
     suhu: float
@@ -112,13 +110,9 @@ CLASS_NAMES_MAPPED = {
     "TMV": "mosaic_virus"
 }
 
-# Variabel ONNX dihapus
-# Fungsi preprocess_image dihapus (tidak digunakan)
-
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
 GROQ_ENABLED = bool(GROQ_API_KEY)
 groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_ENABLED and Groq is not None else None
-
 
 def get_fallback_explanation(disease_name: str, confidence: float) -> Dict[str, str]:
     expert_knowledge = {
@@ -157,20 +151,14 @@ def get_fallback_explanation(disease_name: str, confidence: float) -> Dict[str, 
     })
 
 def calculate_dominant_percentage(disease_counts: Dict[str, int]) -> float:
-    """
-    Menghitung persentase penyakit dominan dari total penyakit terdeteksi
-    """
     if not disease_counts:
         return 0.0
-    
     total_detections = sum(disease_counts.values())
     if total_detections == 0:
         return 0.0
     
-    # Cari penyakit dengan jumlah terbanyak
+    #CARI PENYAKIT JUMLAH TERTINGGI
     dominant_count = max(disease_counts.values()) if disease_counts else 0
-    
-    # Hitung persentase
     percentage = (dominant_count / total_detections) * 100
     return round(percentage, 2)
 
@@ -205,13 +193,10 @@ async def get_ai_explanation(disease_name: str, confidence: float) -> Dict[str, 
             )
             content = response.choices[0].message.content or ""
             txt = content.strip()
-            
-            # Parsing output Groq, menangani code fence dan non-JSON chars
             start = txt.find("{")
             end = txt.rfind("}")
             candidate = txt[start:end+1] if start != -1 and end != -1 and end > start else txt
             
-            # Coba hapus markdown code fence jika ada
             if candidate.startswith("```json"):
                 candidate = candidate[len("```json"):].strip()
             if candidate.endswith("```"):
@@ -223,32 +208,30 @@ async def get_ai_explanation(disease_name: str, confidence: float) -> Dict[str, 
                 print("[DEBUG] Original JSON error: {}".format(e))
                 print("[DEBUG] Raw candidate: {}".format(candidate[:500]))
                 
-                # Multiple fix attempts
                 fixes = [
-                    # Fix 1: Basic quote escaping
+                    # Fix 1: tulisan biasa
                     lambda x: x.replace("'", '"').replace('"', '\\"').replace('\\\\"', '\\"'),
                     
-                    # Fix 2: Regex-based quote fixing for JSON values
+                    # Fix 2: regex based tulisan versi json
                     lambda x: re.sub(r'(\"[^\"]*)\"([^\"]*\":)', r'\1\\\\"\2', x),
                     
-                    # Fix 3: Remove problematic characters and normalize
+                    # Fix 3: Hapus karakter bermasalah normalisasi
                     lambda x: re.sub(r'[\x00-\x1f\x7f-\x9f]', '', x).replace('\n', ' ').replace('\r', ''),
                     
-                    # Fix 4: Handle multiline JSON
+                    # Fix 4: line JSON
                     lambda x: '\\'.join(line.strip() for line in x.split('\n') if line.strip()),
                     
-                    # Fix 5: Aggressive comma and whitespace fixing
+                    # Fix 5: normalisasi tanda baca
                     lambda x: re.sub(r',\s*([}\]])', r'\1', re.sub(r'\s+', ' ', x))
                 ]
                 
                 for i, fix_func in enumerate(fixes):
                     try:
                         fixed = fix_func(candidate)
-                        # Additional safety fixes
-                        fixed = re.sub(r',\s*}', '}', fixed)  # Trailing commas
-                        fixed = re.sub(r',\s*]', ']', fixed)  # Trailing commas in arrays
-                        fixed = re.sub(r'\n\s*', ' ', fixed)  # Remove newlines
-                        fixed = re.sub(r'\s+', ' ', fixed)  # Normalize whitespace
+                        fixed = re.sub(r',\s*}', '}', fixed)
+                        fixed = re.sub(r',\s*]', ']', fixed)
+                        fixed = re.sub(r'\n\s*', ' ', fixed)
+                        fixed = re.sub(r'\s+', ' ', fixed)
                         
                         print("[DEBUG] Attempt {} with fix: {}".format(i+1, fixed[:200]))
                         info = json.loads(fixed)
@@ -268,15 +251,11 @@ async def get_ai_explanation(disease_name: str, confidence: float) -> Dict[str, 
             print("[WARNING] Gagal memanggil Groq: {}".format(e))
     return get_fallback_explanation(disease_name, confidence)
 
-# process_detection: Fungsi ini dipertahankan karena digunakan di /detect, namun isinya diubah 
-# karena inferensi dilakukan di client-side.
+#PROCESS DETECTION UNTUK ENDPOIN /DETECT
 async def process_detection(sensor_data: Optional[Dict] = None) -> Dict:
-    # Server-side processing disabled - using client-side detection
-    
-    # Default to healthy since server doesn't process detections
     detection_counts = {
         "layu_fusarium": 0, "bercak_cercospora": 0, "mosaic_virus": 0, "aphids": 0,
-        "phytophthora_blight": 0, "powdery_mildew": 0, "sehat": 1  # Default to healthy
+        "phytophthora_blight": 0, "powdery_mildew": 0, "sehat": 1 
     }
     
     dominan_disease = "sehat"
@@ -331,13 +310,9 @@ def get_latest_sensor_data_from_firebase() -> Optional[Dict]:
         if not root or len(root) == 0:
             print("[SENSOR] No sensor data found in Firebase")
             return None
-        
         # Ambil data dari key terakhir
         latest_key = list(root.keys())[0]
         latest_data = root[latest_key]
-        
-        # print(f"[SENSOR] Latest sensor data: {latest_data}") # Hapus log berulang
-        
         return {
             "suhu": float(latest_data.get("suhu", 26.9)),
             "kelembapan": int(latest_data.get("kelembapan", 83)),
@@ -351,30 +326,21 @@ def get_latest_sensor_data_from_firebase() -> Optional[Dict]:
 
 def count_detections_last_30_seconds() -> Dict[str, int]:
     """Count detections untuk setiap disease class dalam 30 detik terakhir"""
-    # Catatan: Fungsi ini mengambil semua data 'detections' dari root, yang bisa lambat.
-    # Sebaiknya gunakan order_by_key().start_at() jika struktur Firebase mengizinkan.
     if firebase_app is None:
         print("[COUNT] Firebase not available, returning default counts")
         return {
             'aphids': 0, 'bercak_cercospora': 0, 'layu_fusarium': 0,
             'mosaic_virus': 0, 'phytophthora_blight': 0, 'powdery_mildew': 0, 'sehat': 0
         }
-    
     try:
-        # Ambil detections dari 30 detik terakhir
         now = datetime.now(timezone.utc)
         thirty_seconds_ago = now - timedelta(seconds=30)
-        
-        # NOTE: Ini adalah operasi yang sangat lambat jika data 'detections' besar!
-        # Mengambil seluruh data 'detections' dari root.
         root = firebase_db.reference("detections").get()
         if not root:
             return {
                 'aphids': 0, 'bercak_cercospora': 0, 'layu_fusarium': 0,
                 'mosaic_virus': 0, 'phytophthora_blight': 0, 'powdery_mildew': 0, 'sehat': 0
             }
-        
-        # Count per disease class
         counts = {
             'aphids': 0, 'bercak_cercospora': 0, 'layu_fusarium': 0,
             'mosaic_virus': 0, 'phytophthora_blight': 0, 'powdery_mildew': 0, 'sehat': 0
@@ -386,21 +352,16 @@ def count_detections_last_30_seconds() -> Dict[str, int]:
             for ts_key, data in entries.items():
                 ts_str = data.get("timestamp", "")
                 if not ts_str:
-                    continue
-                        
+                    continue    
                 try:
-                    # Parse timestamp dari Firebase
-                    # Menghilangkan 'Z' dan menggantinya dengan timezone +00:00 untuk kompatibilitas datetime.fromisoformat
                     ts = datetime.fromisoformat(ts_str.replace('Z', '+00:00'))
                     if ts >= thirty_seconds_ago:
                         disease = data.get("dominan_disease", "sehat")
                         if disease in counts:
                             counts[disease] += 1
                 except Exception as e:
-                    # print(f"[COUNT] Error parsing timestamp {ts_str}: {e}") # Hapus log berulang
                     continue
-        
-        print(f"[COUNT] 30s counts: {counts}") # Tambah log untuk debugging
+        print(f"[COUNT] 30s counts: {counts}") 
         return counts
         
     except Exception as e:
@@ -416,23 +377,18 @@ def fetch_detections_from_firebase(limit: int = 100) -> List[Dict]:
     if firebase_app is None:
         raise HTTPException(status_code=500, detail="Firebase belum inisialisasi uyy")
     try:
-        # Mengambil semua data detections (berpotensi lambat)
+        #AMBIL DATA UNTUK FRONTEND
         root = firebase_db.reference("detections").get()
         if not root:
             return []
         
         flattened = []
-        
-        # Handle both list and dictionary structures from Firebase
         if isinstance(root, list):
-            # If root is a list, treat each item as a detection entry
+            #list buat jadi  kayak entry data
             for item in root:
                 if not isinstance(item, dict):
                     continue
-                
-                # Try to extract timestamp from various possible fields
                 ts_iso = item.get("timestamp", datetime.min.isoformat())
-                
                 flattened.append({
                     "firebase_key": item.get("firebase_key", str(len(flattened))),
                     "user_id": item.get("user_id", "unknown"),
@@ -446,14 +402,13 @@ def fetch_detections_from_firebase(limit: int = 100) -> List[Dict]:
                 })
         
         elif isinstance(root, dict):
-            # Original dictionary structure: {user_id: {timestamp_key: data}}
+            # {user_id: {timestamp_key: data}}
             for user_id, entries in root.items():
                 if not isinstance(entries, dict):
                     continue
                 for ts_key, data in entries.items():
                     if not isinstance(data, dict):
                         continue
-                    
                     ts_iso = data.get("timestamp", datetime.min.isoformat())
                     flattened.append({
                         "firebase_key": ts_key,
@@ -466,8 +421,6 @@ def fetch_detections_from_firebase(limit: int = 100) -> List[Dict]:
                         "info": data.get("info", {}),
                         "dominan_confidence_avg": data.get("dominan_confidence_avg", 0)
                     })
-        
-        # Sort by timestamp (newest first) and limit
         flattened.sort(key=lambda x: x.get("timestamp", datetime.min.isoformat()), reverse=True)
         return flattened[:limit]
         
@@ -480,7 +433,6 @@ def fetch_detection_by_key(firebase_key: str) -> Optional[Dict]:
     if firebase_app is None:
         raise HTTPException(status_code=500, detail="Firebase belum inisialisasi uyy")
     try:
-        # Mengambil semua data detections (berpotensi lambat)
         root = firebase_db.reference("detections").get()
         if not root:
             return None 
@@ -505,22 +457,33 @@ def fetch_detection_by_key(firebase_key: str) -> Optional[Dict]:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # load_models() removed
     print("FastAPI Lifespan started - server-side inference disabled.")
     yield
     print("FastAPI Lifespan shutdown.")
     
 app = FastAPI(title="Terra YOLOv8 Detection API", version="1.0.0", lifespan=lifespan)
+#Header Security
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    return response
+
+#CORS security
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], 
+    allow_origins=[
+        "http://localhost:3000",           # Vite local
+        "http://localhost:8000",           # Laravel local
+        "https://terra.onrender.com"       # Production
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["*"],
 )
 
-# --- ENDPOINTS API ---
-
+#ENDPOINTS API
 @app.get("/")
 async def root():
     return {"message": "Halo ini adalah Terra YOLOv8 Detection", "status": "active"}
@@ -528,13 +491,12 @@ async def root():
 @app.get("/health")
 async def health_check():
     model_status = {
-        "onnx_loaded": False,  # Server-side ONNX disabled
+        "onnx_loaded": False,
         "groq_enabled": GROQ_ENABLED,
         "firebase_initialized": firebase_app is not None
     }
     return {"status": "healthy", "models": model_status}
-# ENDPOINT API DETECTION
-# Digunakan untuk simulasi deteksi/mendapatkan info, karena client-side detection sudah memberikan hasil akhir
+#Digunakan untuk simulasi deteksi/mendapatkan info, karena client-side detection sudah memberikan hasil akhir
 @app.post("/detect")
 async def detect_disease(
     background_tasks: BackgroundTasks,
@@ -553,10 +515,9 @@ async def detect_disease(
                 "cahaya": cahaya if cahaya is not None else 42
             }
         else:
-            # Fungsi get_latest_sensor_data_from_firebase() dipanggil jika sensor data tidak disertakan
+            #get_latest_sensor_data_from_firebase() dipanggil jika sensor data tidak disertakan
             sensor_data = get_latest_sensor_data_from_firebase()
-        
-        # NOTE: process_detection selalu mengembalikan 'sehat' karena inferensi di client-side
+        #process_detection selalu mengembalikan 'sehat' karena inferensi di client-side
         result = await process_detection(sensor_data)
         background_tasks.add_task(save_detection_result, result, user_id=user_id)
         
@@ -714,13 +675,11 @@ async def save_sensor_data(sensor_data: SensorData):
         if firebase_app is not None:
             loop = asyncio.get_running_loop()
             def _save_sensor():
-                # Menggunakan integer timestamp sebagai key
+                #
                 timestamp = int(time.time()) 
                 ref = firebase_db.reference("sensor_data/" + str(timestamp))
-                return ref.set(sensor_data.dict()) # Menggunakan .dict() dari Pydantic
-            
+                return ref.set(sensor_data.dict())
             await loop.run_in_executor(None, _save_sensor)
-            # print(f"[SENSOR] Saved to sensor_data/{int(time.time())}") # Hapus log berulang
         
         return JSONResponse(content={
             "success": True,
@@ -779,7 +738,6 @@ async def get_sensor_average():
         
         loop = asyncio.get_running_loop()
         def _get_average():
-            # order_by_key().limit_to_last(15) untuk 15 data terakhir
             ref = firebase_db.reference("sensor_data").order_by_key().limit_to_last(15)
             data = ref.get()
             if not data:
