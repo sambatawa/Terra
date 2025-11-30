@@ -1,7 +1,7 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/sambatawa/Terra-Sm5Pro/main/public/img/terra-logo.png" alt="Terra Ecosystem" width="200">
+   <img src="https://raw.githubusercontent.com/sambatawa/Terra-Sm5Pro/main/sistem-terra/public/img/logo.png" alt="Terra Ecosystem" width="200">
   <h1>Terra</h1>
-  <p><strong>Integrated Smart Farming Platform with AI Disease Detection & IoT Monitoring</strong></p>
+  <p><strong>Monitoring dan AI Detection Disease menggunakan Eggplant Leaf</strong></p>
   
   [![Laravel](https://img.shields.io/badge/Laravel-12.0-FF2D20.svg?style=flat&logo=Laravel)](https://laravel.com)
   [![FastAPI](https://img.shields.io/badge/FastAPI-0.104-009688.svg?style=flat&logo=FastAPI)](https://fastapi.tiangolo.com)
