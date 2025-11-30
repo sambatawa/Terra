@@ -31,7 +31,6 @@ services:
     name: terra-backend
     env: python
     plan: free
-    runtime: python
     rootDir: backendapi
     buildCommand: "pip install -r requirements.txt"
     startCommand: "uvicorn main:app --host=0.0.0.0 --port=$PORT"
