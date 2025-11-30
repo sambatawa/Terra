@@ -1,10 +1,12 @@
 {
   "build": {
-    "builder": "NIXPACKS"
+    "builder": "NIXPACKS",
+    "buildCommand": "cd sistem-terra && npm install && npm run build",
+    "installCommand": "cd sistem-terra && composer install && npm install"
   },
   "deploy": {
     "startCommand": "cd sistem-terra && chmod +x start.sh && ./start.sh",
-    "healthcheckPath": "/",
+    "healthcheckPath": "/health",
     "healthcheckTimeout": 100,
     "restartPolicyType": "ON_FAILURE"
   },
