@@ -39,6 +39,7 @@ Terra-Sm5Pro/
 │   ├── main.py               # FastAPI application entry
 │   ├── requirements.txt      # Python dependencies
 │   └── (AI/ML services)      # Model inference services
+```
 
 ### Komunikasi Sistem
 - **Frontend (Laravel)** ↔ **Backend (FastAPI)** via REST API
@@ -75,13 +76,6 @@ Terra-Sm5Pro/
 - **Engagement Metrics**: Like, comment, view tracking
 - **Expert Badges**: Verification system untuk ahli pertanian
 - **Search & Filter**: Advanced content discovery
-
-### User Management
-- **Role-Based Access**: Petani, Teknisi, Penyuluh, Penjual
-- **Authentication**: Secure login dengan email verification
-- **Profile Management**: Customizable user profiles
-- **Activity Tracking**: Complete user journey analytics
-- **Permission System**: Granular access control
 
 ## Tech Stack
 
