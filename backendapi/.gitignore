@@ -9,6 +9,9 @@ venv/
 ENV/
 .venv
 
+# Dependensi Node
+/node_modules
+
 # Environment variables
 .env
 *.json
