@@ -1,12 +1,6 @@
 <div align="center">
   <h1>Terra</h1>
   <p><strong>Monitoring dan AI Detection Disease menggunakan Eggplant Leaf</strong></p>
-  
-  [![Laravel](https://img.shields.io/badge/Laravel-12.0-FF2D20.svg?style=flat&logo=Laravel)](https://laravel.com)
-  [![FastAPI](https://img.shields.io/badge/FastAPI-0.104-009688.svg?style=flat&logo=FastAPI)](https://fastapi.tiangolo.com)
-  [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.x-38B2AC.svg?style=flat&logo=Tailwind-CSS)](https://tailwindcss.com)
-  [![Firebase](https://img.shields.io/badge/Firebase-Realtime%20Database-FFCA28.svg?style=flat&logo=Firebase)](https://firebase.google.com)
-  [![ONNX](https://img.shields.io/badge/ONNX-Runtime-005CED.svg?style=flat&logo=ONNX)](https://onnx.ai)
 </div>
 
 ## Tentang Proyek
