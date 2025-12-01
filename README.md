@@ -9,12 +9,6 @@
 ## Tentang Proyek
 
 **Terra** adalah platform pertanian cerdas yang mengintegrasikan teknologi AI, IoT, dan machine learning untuk membantu petani Indonesia dalam monitoring kesehatan tanaman dan meningkatkan produktivitas.
-
-### Visi & Misi
-- **Visi**: Menjadi leading smart farming platform di Indonesia
-- **Misi**: Memberdayakan petani Terung Ungu dengan teknologi modern untuk pertanian berkelanjutan
-
-### Nilai Utama
 - **AI-Powered Disease Detection** - Deteksi penyakit tanaman real-time
 - **IoT Sensor Integration** - Monitoring kondisi lingkungan
 - **Digital Marketplace** - Platform jual beli produk pertanian
