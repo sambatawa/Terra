@@ -12,6 +12,7 @@ ENV/
 # Environment variables
 .env
 *.json
+firebase-credentials.json
 # Database
 *.db
 *.sqlite
