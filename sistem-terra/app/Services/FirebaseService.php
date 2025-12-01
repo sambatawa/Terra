@@ -61,10 +61,6 @@ class FirebaseService
             $this->initialized = false;
         }
     }
-
-    /**
-     * Save detection result to Firebase Realtime Database
-     */
     public function saveDetection($userId, $detectionData)
     {
         try {
@@ -133,10 +129,6 @@ class FirebaseService
             ];
         }
     }
-
-    /**
-     * Get detections for a user
-     */
     public function getDetections($userId, $limit = 50)
     {
         try {
@@ -179,10 +171,6 @@ class FirebaseService
             return [];
         }
     }
-
-    /**
-     * Get database reference for real-time listener
-     */
     public function getDatabase()
     {
         return $this->database;

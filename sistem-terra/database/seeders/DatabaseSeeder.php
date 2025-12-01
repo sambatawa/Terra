@@ -10,12 +10,8 @@ class DatabaseSeeder extends Seeder
 {
     use WithoutModelEvents;
 
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
-        // Buat Akun Teknisi Otomatis
         \App\Models\User::create([
             'name' => 'Master Teknisi',
             'email' => 'inassamara07@gmail.com',
@@ -32,10 +28,6 @@ class DatabaseSeeder extends Seeder
         ]);
         $this->createKodeUnikPetani();
     }
-
-    /**
-     * Buat data kode unik petani dummy
-     */
     private function createKodeUnikPetani(): void
     {
         $kodeUnikPetanis = [

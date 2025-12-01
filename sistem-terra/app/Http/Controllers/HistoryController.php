@@ -21,18 +21,14 @@ class HistoryController extends Controller
         $role = $user->role;
         $data = [];
 
-        // 1. LOGIKA PETANI & TEKNISI (Lihat Deteksi & Sensor)
         if ($role == 'petani' || $role == 'teknisi') {
-            // Ambil data dari Firebase Real-time Database
             $firebaseDetections = [];
             try {
                 $firebaseService = new FirebaseService();
-                // Auto save sekarang menggunakan user ID yang login
                 $userData = $firebaseService->getDetections($user->id, null); // Ambil semua data
                 $manualData = $firebaseService->getDetections('manual_user', null); // Ambil semua data
                 $autoSimpanData = $firebaseService->getDetections('autoSimpan', 100); // Ambil 100 data terbaru
                 $allFirebaseData = array_merge($userData, $manualData, $autoSimpanData);
-                //sorting dengan timestamp terbaru
                 usort($allFirebaseData, function($a, $b) {
                     $timeA = isset($a['timestamp']) ? (int)$a['timestamp'] : 0;
                     $timeB = isset($b['timestamp']) ? (int)$b['timestamp'] : 0;
@@ -54,7 +50,6 @@ class HistoryController extends Controller
             }
             
             $data['detections'] = $firebaseDetections;
-            //GENERATE SENSOR ADA CONTROLLER DAN BLADE
             $generateSensor = function($time) {
                 $suhu = mt_rand(280, 310) / 10;
                 $hum = mt_rand(55, 65);
@@ -82,19 +77,16 @@ class HistoryController extends Controller
                 $generateSensor(now()->subHour(1))
             ];
         } 
-        // 2. LOGIKA PENJUAL (Lihat Klik Produk)
         elseif ($role == 'penjual') {
             $data['clicks'] = ProductClick::where('seller_id', $user->id)->latest()->get();
             $data['total_clicks'] = $data['clicks']->count();
         } 
-        // 3. LOGIKA PENYULUH (Lihat Aktivitas Forum) -> INI YANG BARU
         elseif ($role == 'penyuluh') {
             $data['posts'] = Post::where('user_id', $user->id)
                                  ->withCount('comments', 'likes')
                                  ->latest()
                                  ->get();
             
-            // Hitung total interaksi (Like + Komen yang diterima)
             $data['total_posts'] = $data['posts']->count();
             $data['total_interactions'] = $data['posts']->sum('likes_count') + $data['posts']->sum('comments_count');
         }
@@ -102,7 +94,6 @@ class HistoryController extends Controller
         return view('history.index', compact('data', 'role'));
     }
 
-    // FUNGSI EXPORT PDF (UPDATE JUGA BIAR PENYULUH BISA DOWNLOAD)
     public function export()
     {
         $user = Auth::user();
@@ -125,7 +116,6 @@ class HistoryController extends Controller
                 $manualData = $firebaseService->getDetections('manual_user', null);
                 $autoSimpanData = $firebaseService->getDetections('autoSimpan', 100);
                 $allFirebaseData = array_merge($userData, $manualData, $autoSimpanData);
-                // Sorting seperti di index
                 usort($allFirebaseData, function($a, $b) {
                     $timeA = isset($a['timestamp']) ? (int)$a['timestamp'] : 0;
                     $timeB = isset($b['timestamp']) ? (int)$b['timestamp'] : 0;
@@ -216,7 +206,6 @@ class HistoryController extends Controller
             return $this->generateCSVFallback($processedData, $role, $user, $fileName);
         }
     }
-    //Track Confidence and Label from FastAPI
     public function storeDetection(Request $request) {
         Detection::create(['user_id' => Auth::id(), 'label' => $request->label, 'confidence' => $request->confidence]);
         return response()->json(['success' => true]);
@@ -226,9 +215,6 @@ class HistoryController extends Controller
         return response()->json(['success' => true]);
     }
 
-    /**
-     * Refresh data dari Firebase untuk AJAX request
-     */
     public function refresh(Request $request)
     {
         $user = Auth::user();
@@ -263,10 +249,6 @@ class HistoryController extends Controller
         }
     }
 
-    /**
-     * API endpoint untuk auto-save detection dari FastAPI backend
-     * Menggunakan API token sederhana untuk security
-     */
     public function autoSaveDetection(Request $request) {
         $apiToken = $request->header('X-API-Token');
         $expectedToken = env('FASTAPI_TOKEN', 'terra-api-token-2024');
@@ -281,7 +263,6 @@ class HistoryController extends Controller
             'image_snapshot' => 'nullable|string'
         ]);
         $userId = $request->user_id ?? 1;
-        // Simpan detection
         Detection::create([
             'user_id' => $userId,
             'label' => $request->label,
@@ -294,9 +275,6 @@ class HistoryController extends Controller
         ]);
     }
 
-    /**
-     * Delete detection from Firebase
-     */
     public function destroy($id)
     {
         try {

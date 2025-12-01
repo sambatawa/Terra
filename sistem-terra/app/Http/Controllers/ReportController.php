@@ -31,21 +31,17 @@ class ReportController extends Controller
 
     public function store(Request $request)
     {
-        // 1. Buat Laporan (Parent)
         $report = Report::create([
             'user_id' => Auth::id(),
             'title' => $request->title,
             'description' => $request->description,
             'status' => 'pending'
         ]);
-
-        // 2. Buat Pesan Pertama (Child)
         ReportMessage::create([
             'report_id' => $report->id,
             'user_id' => Auth::id(),
             'message' => $request->description
         ]);
-
         return back()->with('success', 'Tiket laporan dibuat.');
     }
 
@@ -53,15 +49,11 @@ class ReportController extends Controller
     {
         $request->validate(['message' => 'required']);
 
-        // 1. Simpan Pesan Baru
         ReportMessage::create([
-            'report_id' => $id, // Langsung pakai ID dari URL
+            'report_id' => $id, 
             'user_id' => Auth::id(),
             'message' => $request->message
         ]);
-
-        // 2. Opsional: Ubah status jadi 'pending' lagi kalau petani yang balas
-        // Supaya teknisi tau ada balasan baru
         if(Auth::user()->role == 'petani'){
             $report = Report::find($id);
             $report->update(['status' => 'pending']);
@@ -72,10 +64,7 @@ class ReportController extends Controller
 
     public function resolve($id)
     {
-        // JURUS ANTI ERROR: Pakai cara Query Builder
-        // "Cari tabel reports yang id-nya sekian, lalu update statusnya"
         Report::where('id', $id)->update(['status' => 'resolved']);
-        
         return back()->with('success', 'Masalah ditandai selesai.');
     }
 }

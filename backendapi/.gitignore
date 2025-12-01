@@ -1,4 +1,3 @@
-# Python
 __pycache__/
 *.py[cod]
 *$py.class
@@ -8,37 +7,20 @@ env/
 venv/
 ENV/
 .venv
-
-# Dependensi Node
 /node_modules
-
-# Environment variables
 .env
 *.json
 firebase-credentials.json
-# Database
 *.db
 *.sqlite
 *.sqlite3
-
-# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-
-# Model files (if too large)
-# model/*.onnx
-# model/*.pt
-
-# Logs
 *.log
 logs/
-
-# OS
 .DS_Store
 Thumbs.db
-
-# Snapshots
 snapshots/
 

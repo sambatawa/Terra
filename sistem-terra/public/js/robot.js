@@ -17,9 +17,8 @@ let localModelReady = false;
 let localProcessing = false;
 let lastLocalRun = 0;
 let lastAutoSaveTime = 0;
-const AUTO_SAVE_INTERVAL = 30000; // 30 seconds
+const AUTO_SAVE_INTERVAL = 30000;
 
-// Global disease counting system
 let currentDisease = null;
 let diseaseCounts = {
     'aphids': 0,
@@ -30,10 +29,8 @@ let diseaseCounts = {
     'powdery_mildew': 0,
     'sehat': 0
 };
-
-// Local detection history for counting (last 30 seconds)
 let detectionHistory = [];
-const HISTORY_DURATION = 30000; // 30 seconds
+const HISTORY_DURATION = 30000;
 
 const CLASS_NAME_DISPLAY = {
     aphids: "Aphids",
@@ -193,7 +190,6 @@ async function loopAI() {
     window.requestAnimationFrame(loopAI);
 }
 /**
- * Menghitung Intersection Over Union (IOU) dari dua bounding box.
  * @param {object} box1 - {x1, y1, x2, y2}
  * @param {object} box2 - {x1, y1, x2, y2}
  * @returns {number} Nilai IOU (0 hingga 1).
@@ -203,29 +199,21 @@ function calculateIOU(box1, box2) {
     const yA = Math.max(box1.y1, box2.y1);
     const xB = Math.min(box1.x2, box2.x2);
     const yB = Math.min(box1.y2, box2.y2);
-
-    // Hitung area interseksi
     const intersectionWidth = Math.max(0, xB - xA);
     const intersectionHeight = Math.max(0, yB - yA);
     const intersectionArea = intersectionWidth * intersectionHeight;
-
-    // Hitung area box1 dan box2
     const area1 = (box1.x2 - box1.x1) * (box1.y2 - box1.y1);
     const area2 = (box2.x2 - box2.x1) * (box2.y2 - box2.y1);
-
-    // Hitung IOU
     return intersectionArea / (area1 + area2 - intersectionArea);
 }
 
 /**
- * Menerapkan Non-Maximum Suppression (NMS).
- * @param {Array} boxes - Array deteksi {class, confidence, bbox: {x1, y1, x2, y2}}
- * @param {number} iouThreshold - Batas IOU untuk menekan box (misalnya 0.45)
- * @returns {Array} Array deteksi yang sudah difilter.
+ * @param {Array} boxes x1, y1, x2, y2
+ * @param {number} iouThreshold 
+ * @returns {Array}
  */
 function nonMaxSuppression(boxes, iouThreshold) {
     if (!boxes || boxes.length === 0) return [];
-    //SORTING CONFIDENCE (DESC)
     boxes.sort((a, b) => b.confidence - a.confidence);
     const pickedBoxes = [];
     const suppressed = new Array(boxes.length).fill(false);
@@ -233,12 +221,10 @@ function nonMaxSuppression(boxes, iouThreshold) {
         if (suppressed[i]) continue;
         const boxI = boxes[i];
         pickedBoxes.push(boxI);
-        //BANDINGAN BOX
         for (let j = i + 1; j < boxes.length; j++) {
             if (suppressed[j]) continue;
             const boxJ = boxes[j];
             const iou = calculateIOU(boxI.bbox, boxJ.bbox);
-            //HAPUS DUPLIKAT
             if (iou > iouThreshold) {
                 suppressed[j] = true;
             }
@@ -254,11 +240,9 @@ async function predictLocal() {
     localProcessing = true;
     lastLocalRun = now;
     try {
-        //PREPROCESSING RESIZE
         tempCtxLocal.drawImage(videoElement, 0, 0, LOCAL_INPUT_SIZE, LOCAL_INPUT_SIZE);
         const imageData = tempCtxLocal.getImageData(0, 0, LOCAL_INPUT_SIZE, LOCAL_INPUT_SIZE);
         
-        //NORMALISASI
         const inputSizeSquared = LOCAL_INPUT_SIZE * LOCAL_INPUT_SIZE;
         const input = new Float32Array(3 * inputSizeSquared);
         const pixels = imageData.data;
@@ -269,13 +253,10 @@ async function predictLocal() {
             input[inputSizeSquared + i] = pixels[idx + 1] / 255.0; 
             input[2 * inputSizeSquared + i] = pixels[idx + 2] / 255.0; 
         }
-        //SHAPE
         const tensor = new ort.Tensor("float32", input, [1, 3, LOCAL_INPUT_SIZE, LOCAL_INPUT_SIZE]);
-        //INFERENSI
         const feeds = {};
         feeds[localSession.inputNames[0]] = tensor; 
         const results = await localSession.run(feeds);
-        //POSTPROCESSING
         const outputName = localSession.outputNames[0];
         const outputTensor = results[outputName];
         let detections = processLocalOutput(
@@ -296,7 +277,6 @@ async function predictLocal() {
         localProcessing = false;
     }
 }
-//OUTPUT PROCESSING
 function processLocalOutput(data, dims, imgWidth, imgHeight) {
     const detections = [];
     if (!data || !dims || dims.length < 3) return detections;
@@ -306,10 +286,8 @@ function processLocalOutput(data, dims, imgWidth, imgHeight) {
     const numAnchors = isTransposed ? rows : cols;
     const numClasses = (isTransposed ? cols : rows) - 4;
     const CONF_THRESH = LOCAL_CONFIDENCE_THRESHOLD;
-    //SKALA FAKTOR SESUAI?
     const scaleX = imgWidth / LOCAL_INPUT_SIZE;
     const scaleY = imgHeight / LOCAL_INPUT_SIZE;
-    //CEK CONFIDENCE
     for (let i = 0; i < numAnchors; i++) {
         let maxScore = 0;
         let maxClassIndex = -1;
@@ -317,7 +295,6 @@ function processLocalOutput(data, dims, imgWidth, imgHeight) {
         let offset;
         if (isTransposed) {
             offset = i * (numClasses + 4);
-            //CHECK FIRST BOX
             const boxScore = Math.max(data[offset], data[offset + 1], data[offset + 2], data[offset + 3]);
             if (boxScore < CONF_THRESH * 0.5) continue;
             for (let c = 0; c < numClasses; c++) {
@@ -336,7 +313,6 @@ function processLocalOutput(data, dims, imgWidth, imgHeight) {
         } else {
             const stride = numAnchors;
             offset = i;
-            //CHECK FIRST BOX
             const boxScore = Math.max(data[i], data[stride + i], data[2 * stride + i], data[3 * stride + i]);
             if (boxScore < CONF_THRESH * 0.5) continue;
             for (let c = 0; c < numClasses; c++) {
@@ -355,7 +331,6 @@ function processLocalOutput(data, dims, imgWidth, imgHeight) {
         }
 
         if (maxScore <= CONF_THRESH || maxClassIndex === -1) continue;
-        //LOOP CALCULATE SKALA
         let x1 = (x - w / 2) * scaleX;
         let y1 = (y - h / 2) * scaleY;
         let wScaled = w * scaleX;
@@ -399,23 +374,18 @@ function updateDiseaseCounting(det) {
     const now = Date.now();
     detectionHistory = detectionHistory.filter(item => now - item.timestamp < HISTORY_DURATION);
     if (det.length === 0) {
-        //UPDATE CURRENT DISEASE
         currentDisease = null;
         console.log('[DISEASE COUNT] No detection');
         return;
     }
-    //DETECTIONS DISEASE HIGH
     const topDetection = det.reduce((a, b) => (a.confidence > b.confidence ? a : b));
     const detectedClass = topDetection.class;
-    //UPDATE AGAIN BRO
     currentDisease = detectedClass;
-    //PUSH TO HISTORY
     detectionHistory.push({
         disease: detectedClass,
         timestamp: now,
         confidence: topDetection.confidence
     });
-    //PANGGIL FUNCTION COUNT DISEASE
     recalculateDiseaseCounts();
     console.log('[DISEASE COUNT] Current:', diseaseCounts);
 }
@@ -434,7 +404,6 @@ function recalculateDiseaseCounts() {
 function getDisplayName(slug) {
     return CLASS_NAME_DISPLAY[slug] || slug.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 }
-//BBOXES
 function drawBoundingBoxes(det) {
     const lastWidth = Number(canvas.dataset.lastWidth) || videoElement.videoWidth || 1;
     const lastHeight = Number(canvas.dataset.lastHeight) || videoElement.videoHeight || 1;
@@ -622,4 +591,3 @@ document.addEventListener("keyup", e => {
         btn?.classList.remove("translate-y-[4px]", "shadow-none");
     }
 });
-

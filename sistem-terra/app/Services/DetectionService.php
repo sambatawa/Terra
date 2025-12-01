@@ -18,11 +18,9 @@ class DetectionService
     }
 
     /**
-     * Deteksi penyakit dari gambar
-     * 
-     * @param string $imagePath Path lengkap ke file gambar
-     * @param array|null $sensorData Data sensor (suhu, kelembapan, cahaya)
-     * @return array Hasil deteksi dari API
+     * @param string 
+     * @param array|null 
+     * @return array 
      * @throws Exception
      */
     public function detect(string $imagePath, ?array $sensorData = null): array
@@ -34,8 +32,6 @@ class DetectionService
 
             $request = Http::timeout($this->timeout)
                 ->attach('file', file_get_contents($imagePath), basename($imagePath));
-
-            // Tambahkan data sensor jika ada (sesuai JSON structure)
             if ($sensorData) {
                 if (isset($sensorData['suhu'])) {
                     $request = $request->attach('suhu', (string)$sensorData['suhu']);
@@ -67,9 +63,7 @@ class DetectionService
     }
 
     /**
-     * Ambil riwayat deteksi dari API
-     * 
-     * @param int $limit Jumlah data yang diambil
+     * @param int 
      * @return array
      */
     public function getRecentDetections(int $limit = 100): array
@@ -95,10 +89,8 @@ class DetectionService
     }
 
     /**
-     * Real-time detection untuk video frame - return bounding boxes saja
-     * 
-     * @param string $imagePath Path lengkap ke file gambar (frame)
-     * @return array Detections dengan bounding boxes
+     * @param string 
+     * @return array 
      * @throws Exception
      */
     public function detectRealtime(string $imagePath): array
@@ -108,7 +100,7 @@ class DetectionService
                 throw new Exception("File gambar tidak ditemukan: {$imagePath}");
             }
 
-            $response = Http::timeout(5) // Timeout pendek untuk real-time
+            $response = Http::timeout(5) 
                 ->attach('file', file_get_contents($imagePath), basename($imagePath))
                 ->post("{$this->apiUrl}/detect/realtime");
 
@@ -127,8 +119,6 @@ class DetectionService
     }
 
     /**
-     * Cek status API
-     * 
      * @return array
      */
     public function healthCheck(): array

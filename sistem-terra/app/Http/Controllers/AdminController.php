@@ -7,7 +7,6 @@ class AdminController extends Controller
 {
     public function index()
     {
-        // Ambil semua user KECUALI dirinya sendiri (teknisi)
         $users = User::where('role', '!=', 'teknisi')->latest()->get();
         return view('admin.users', compact('users'));
     }

@@ -155,6 +155,81 @@
                         </p>
                     </div>
                 </div>
+                <div class="text-center mt-16">
+                    <h5 class="text-2xl font-bold text-gray-900 mb-8">Produk Populer di Marketplace</h5>
+                    <div class="relative max-w-5xl mx-auto">
+                        <div class="bg-purple-50 rounded-3xl p-8 elegant-shadow border border-purple-100">
+                            <div class="flex items-center justify-between mb-6">
+                                <button onclick="prevSlide()" class="carousel-arrow prev w-10 h-10 bg-white rounded-full shadow-md flex items-center justify-center hover:bg-purple-100 transition-all duration-300 hover:scale-110 hover:shadow-lg">
+                                    <svg class="w-5 h-5 text-purple-600 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+                                </button>
+                                <button onclick="nextSlide()" class="carousel-arrow next w-10 h-10 bg-white rounded-full shadow-md flex items-center justify-center hover:bg-purple-100 transition-all duration-300 hover:scale-110 hover:shadow-lg">
+                                    <svg class="w-5 h-5 text-purple-600 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+                                </button>
+                            </div>
+                            
+                            <div class="overflow-hidden">
+                                <div id="productCarousel" class="flex transition-transform duration-500 ease-in-out">
+                                    @php
+                                        $featuredProducts = App\Models\Product::with('seller')
+                                            ->where('stock', '>', 0)
+                                            ->latest()
+                                            ->take(6)
+                                            ->get();
+                                    @endphp
+                                    @if($featuredProducts->count() > 0)
+                                        @foreach($featuredProducts as $product)
+                                        <div class="min-w-full md:min-w-0 md:w-1/3 px-2">
+                                            <div class="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow">
+                                                <img src="{{ asset($product->image) }}" alt="{{ $product->name }}" class="w-full h-48 object-cover">
+                                                <div class="p-3">
+                                                    <h6 class="font-bold text-gray-800 mb-2">{{ $product->name }}</h6>
+                                                    <p class="text-green-600 font-bold text-lg mb-2">{{ $product->getFormattedPrice() }}</p>
+                                                    <p class="text-gray-500 text-sm mb-3">{{ Str::limit($product->description, 60) }}</p>
+                                                    <div class="flex items-center justify-between">
+                                                        <span class="text-xs text-gray-400">Stok: {{ $product->stock }}</span>
+                                                        @if($product->stock == 0)
+                                                            <span class="bg-red-100 text-red-700 text-xs px-2 py-1 rounded-full">Habis</span>
+                                                        @elseif($product->stock < 5)
+                                                            <span class="bg-orange-100 text-orange-700 text-xs px-2 py-1 rounded-full">Sisa {{ $product->stock }}!</span>
+                                                        @else
+                                                            <span class="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full">Tersedia</span>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        @endforeach
+                                    @else
+                                        <div class="min-w-full md:min-w-0 md:w-1/3 px-2">
+                                            <div class="bg-white rounded-xl overflow-hidden shadow-sm">
+                                                <div class="w-full h-48 bg-gray-200 flex items-center justify-center">
+                                                    <svg class="w-12 h-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
+                                                </div>
+                                                <div class="p-4">
+                                                    <h6 class="font-bold text-gray-800 mb-2">Belum ada produk</h6>
+                                                    <p class="text-gray-500 text-sm mb-3">Produk akan segera tersedia</p>
+                                                    <div class="flex items-center justify-between">
+                                                        <span class="text-xs text-gray-400">Stok: 0</span>
+                                                        <span class="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-full">Kosong</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+                            <div class="flex justify-center mt-6 gap-2">
+                                @php
+                                    $totalSlides = max(1, ceil($featuredProducts->count() / 3));
+                                @endphp
+                                @for($i = 0; $i < $totalSlides; $i++)
+                                    <button onclick="goToSlide({{ $i }})" class="w-2 h-2 {{ $i == 0 ? 'bg-purple-600' : 'bg-gray-300' }} rounded-full transition-all duration-300" id="indicator-{{ $i }}"></button>
+                                @endfor
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
@@ -302,6 +377,42 @@
             </div>
         </div>
     </footer>
+
+<style>
+    .carousel-arrow {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .carousel-arrow:hover {
+        transform: scale(1.1);
+        box-shadow: 0 10px 25px rgba(147, 51, 234, 0.3);
+    }
+    .carousel-arrow:active {
+        transform: scale(0.95);
+    }
+    .carousel-arrow svg {
+        transition: transform 0.3s ease;
+    }
+    
+    .carousel-arrow:hover svg {
+        transform: translateX(2px);
+    }
+    
+    .carousel-arrow.prev:hover svg {
+        transform: translateX(-2px);
+    }
+    
+    @keyframes arrowPulse {
+        0%, 100% {
+            transform: scale(1);
+        }
+        50% {
+            transform: scale(1.05);
+        }
+    }
+    .carousel-arrow.pulse {
+        animation: arrowPulse 0.3s ease-in-out;
+    }
+</style>
 
 </body>
 </html>

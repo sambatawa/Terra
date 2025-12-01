@@ -57,6 +57,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/forum/comment/{postId}', [ForumController::class, 'storeComment'])->name('forum.comment');
     Route::post('/forum/like/{postId}', [ForumController::class, 'toggleLike'])->name('forum.like');
     Route::delete('/forum/delete/{postId}', [ForumController::class, 'deletePost'])->name('forum.delete');
+    Route::get('/api/forum/latest', [ForumController::class, 'latestPosts'])->name('api.forum.latest');
     Route::get('/history', [HistoryController::class, 'index'])->name('history');
     Route::post('/history/detection', [HistoryController::class, 'storeDetection'])->name('history.store_detection');
     Route::get('/history/refresh', [HistoryController::class, 'refresh'])->name('history.refresh');
@@ -67,26 +68,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/api/product-recommendation', [App\Http\Controllers\MarketplaceController::class, 'getRecommendation']);
     });
 
-
-// Sensor API Routes (no auth required)
 Route::get('/api/sensor/current', [App\Http\Controllers\SensorApiController::class, 'getCurrent'])->name('api.sensor.current');
 Route::get('/api/sensor/history', [App\Http\Controllers\SensorApiController::class, 'getHistory']);
 Route::post('/api/sensor/generate', [App\Http\Controllers\SensorApiController::class, 'generateAndSave'])->name('api.sensor.generate')->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
 Route::get('/api/sensor/firebase', [App\Http\Controllers\SensorApiController::class, 'getFromFirebase']);
-    
-// Sensor untuk Detections
 Route::post('/api/sensor/auto-update-detections', [App\Http\Controllers\SensorApiController::class, 'autoUpdateDetections'])->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
-
-// Tooltip API Routes
 Route::get('/api/tooltip', [App\Http\Controllers\TooltipApiController::class, 'getTooltips'])->name('api.tooltip');
-
-// GROUP TEKNISI (MANAJEMEN USER)
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/admin/users', [App\Http\Controllers\AdminController::class, 'index'])->name('admin.users');
     Route::delete('/admin/users/{id}', [App\Http\Controllers\AdminController::class, 'destroy'])->name('admin.users.delete');
 });
-
-// GROUP LAPORAN (PETANI & TEKNISI)
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/laporan', [App\Http\Controllers\ReportController::class, 'index'])->name('reports.index');
     Route::post('/laporan', [App\Http\Controllers\ReportController::class, 'store'])->name('reports.store');
@@ -96,17 +87,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 Route::middleware(['auth'])->group(function () {
     Route::get('/laporan', [App\Http\Controllers\ReportController::class, 'index'])->name('reports.index');
     Route::post('/laporan', [App\Http\Controllers\ReportController::class, 'store'])->name('reports.store');
-    
-    // --- JALUR KHUSUS CHAT (Biar Gak Bentrok) ---
-    
-    // 1. Kirim Chat (POST) -> Perhatikan URL-nya ada kata 'chat'
     Route::post('/chat/kirim/{id}', [App\Http\Controllers\ReportController::class, 'reply'])->name('chat.kirim');
-    
-    // 2. Selesaikan Masalah (PUT)
     Route::put('/chat/selesai/{id}', [App\Http\Controllers\ReportController::class, 'resolve'])->name('chat.selesai');
 });
-
-// Email Verification Routes
 Route::middleware('auth')->group(function () {
     Route::get('/email/verify', [App\Http\Controllers\Auth\EmailVerificationPromptController::class, '__invoke'])
         ->name('verification.notice');

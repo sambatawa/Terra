@@ -48,6 +48,49 @@ class ForumController extends Controller
         return back()->with('success', 'Diskusi berhasil diposting!');
     }
 
+    // API: Get latest forum posts
+    public function latestPosts(Request $request)
+    {
+        try {
+            $posts = Post::with(['user', 'likes', 'comments'])
+                ->withCount(['likes', 'comments'])
+                ->latest()
+                ->take(10) // Get more posts for sorting
+                ->get()
+                ->map(function ($post) {
+                    return [
+                        'id' => $post->id,
+                        'title' => $post->title,
+                        'author' => $post->user ? $post->user->name : 'Anonymous',
+                        'category' => $post->getCategoryName(),
+                        'excerpt' => \Illuminate\Support\Str::limit(strip_tags($post->content), 100),
+                        'created_at' => $post->created_at->diffForHumans(),
+                        'replies' => $post->comments_count,
+                        'likes' => $post->likes_count,
+                        'link' => '/forum#' . $post->id,
+                        'category_key' => $post->category,
+                        'category_icon' => $post->getCategoryIcon(),
+                        'category_color' => $post->getCategoryColor()
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'posts' => $posts,
+                'total' => $posts->count()
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('Forum API Error: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load forum posts',
+                'posts' => []
+            ], 500);
+        }
+    }
+
     public function storeComment(Request $request, $postId)
     {
         $request->validate(['content' => 'required']);

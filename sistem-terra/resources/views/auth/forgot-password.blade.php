@@ -66,12 +66,10 @@
 
         <div class="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white">
             <div class="w-full max-w-md">
-                
                 <div class="lg:hidden text-center mb-8">
                     <img src="{{ asset('img/logo.png') }}" class="h-10 w-auto mx-auto mb-4">
                     <h2 class="text-2xl font-bold text-gray-900">Reset Password</h2>
                 </div>
-
                 <div class="hidden lg:block mb-6">
                     <div class="bg-purple-100 w-16 h-16 rounded-2xl flex items-center justify-center text-purple-600 mb-6">
                         <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
@@ -81,12 +79,10 @@
                         Lupa kata sandi? Tidak masalah. Beri tahu kami alamat email Anda dan kami akan mengirimkan tautan pengaturan ulang kata sandi melalui email.
                     </p>
                 </div>
-
                 <x-auth-session-status class="mb-4" :status="session('status')" />
 
                 <form method="POST" action="{{ route('password.email') }}" class="space-y-6">
                     @csrf
-
                     <div>
                         <label for="email" class="block text-sm font-semibold text-gray-700 mb-2">Alamat Email Terdaftar</label>
                         <div class="relative">
@@ -97,7 +93,6 @@
                         </div>
                         <x-input-error :messages="$errors->get('email')" class="mt-2" />
                     </div>
-
                     <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-gradient-primary hover:shadow-lg hover:shadow-purple-500/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-all transform hover:-translate-y-0.5">
                         {{ __('Kirim Tautan Reset Password') }}
                     </button>

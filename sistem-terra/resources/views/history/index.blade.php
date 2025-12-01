@@ -434,10 +434,10 @@
                 </td>
                 <td class="p-4 text-xs text-gray-600">
                     <div class="space-y-1">
-                        <div class="flex items-center gap-1"><span class="text-gray-400">🌡️</span><span>${suhu}${suhu !== '-' ? '°C' : ''}</span></div>
-                        <div class="flex items-center gap-1"><span class="text-gray-400">💧</span><span>${kelembapan}${kelembapan !== '-' ? '%' : ''}</span></div>
-                        <div class="flex items-center gap-1"><span class="text-gray-400">☀️</span><span>${cahaya}${cahaya !== '-' ? ' Lux' : ''}</span></div>
-                        ${sensorStatus.includes('Warning') ? `<div class="text-xs font-bold text-yellow-600 bg-yellow-50 px-1.5 py-0.5 rounded mt-1">⚠️ ${sensorStatus}</div>` : ''}
+                        <div class="flex items-center gap-1"><i class="fas fa-thermometer-half text-gray-400"></i><span>${suhu}${suhu !== '-' ? '°C' : ''}</span></div>
+                        <div class="flex items-center gap-1"><i class="fas fa-tint text-gray-400"></i><span>${kelembapan}${kelembapan !== '-' ? '%' : ''}</span></div>
+                        <div class="flex items-center gap-1"><i class="fas fa-sun text-gray-400"></i><span>${cahaya}${cahaya !== '-' ? ' Lux' : ''}</span></div>
+                        ${sensorStatus.includes('Warning') ? `<div class="text-xs font-bold text-yellow-600 bg-yellow-50 px-1.5 py-0.5 rounded mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>${sensorStatus}</div>` : ''}
                     </div>
                 </td>
                 <td class="p-4 text-xs text-gray-700 max-w-xs">

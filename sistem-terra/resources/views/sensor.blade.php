@@ -145,6 +145,30 @@
                     </div>
                 </div>
             </div>
+            <div class="mt-8 bg-white rounded-3xl shadow-xl border border-purple-100 overflow-hidden">
+                <div class="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-white">
+                    <h3 class="font-bold text-gray-800 flex items-center gap-2">
+                        <span class="bg-purple-100 p-1.5 rounded-lg text-purple-600">
+                            <i class="fas fa-comments"></i>
+                        </span>
+                        Highlight Postingan Forum
+                        <span id="forum-count" class="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">0</span>
+                    </h3>
+                    <button onclick="refreshForumPosts()" class="text-xs font-bold text-purple-600 hover:bg-purple-50 px-3 py-1.5 rounded-lg transition flex items-center gap-1">
+                        <i class="fas fa-sync-alt"></i>
+                        Refresh
+                    </button>
+                </div>
+                <div class="p-6">
+                    <div id="forum-highlights" class="space-y-4">
+                        <!-- Forum posts will be dynamically added here -->
+                        <div class="text-center text-gray-400 py-8">
+                            <i class="fas fa-comments text-4xl mb-4"></i>
+                            <p class="text-sm">Memuat postingan forum...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <div class="mt-8 bg-white rounded-3xl shadow-xl border border-purple-100 overflow-hidden">
                 <div class="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-white">
@@ -153,31 +177,30 @@
                             <i class="fas fa-clock"></i>
                         </span>
                         Riwayat Peringatan (Alert Log)
+                        <span id="alert-count" class="bg-red-500 text-white text-xs px-2 py-1 rounded-full">0</span>
                     </h3>
-                    <button class="text-xs font-bold text-purple-600 hover:underline">Lihat Semua</button>
+                    <div class="flex gap-2">
+                        <button onclick="clearAllAlerts()" class="text-xs font-bold text-red-600 hover:bg-red-50 px-2 py-1 rounded transition">Hapus Semua</button>
+                        <button class="text-xs font-bold text-purple-600 hover:underline">Lihat Semua</button>
+                    </div>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="min-w-full text-left text-sm">
                         <thead class="bg-purple-50 text-purple-900">
                             <tr>
-                                <th class="px-6 py-3 font-bold">Waktu</th>
-                                <th class="px-6 py-3 font-bold">Sensor</th>
-                                <th class="px-6 py-3 font-bold">Pesan</th>
-                                <th class="px-6 py-3 font-bold">Status</th>
+                                <th class="px-4 py-3 font-bold">Waktu</th>
+                                <th class="px-4 py-3 font-bold">Sensor</th>
+                                <th class="px-4 py-3 font-bold">Pesan</th>
+                                <th class="px-4 py-3 font-bold">Status</th>
+                                <th class="px-4 py-3 font-bold">Aksi</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-gray-100">
-                            <tr class="hover:bg-gray-50 transition">
-                                <td class="px-6 py-4 text-gray-600">10:45 AM</td>
-                                <td class="px-6 py-4 font-bold text-yellow-600">Cahaya</td>
-                                <td class="px-6 py-4 text-gray-700">Intensitas terlalu tinggi (>2000 Lux)</td>
-                                <td class="px-6 py-4"><span class="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-bold">Warning</span></td>
-                            </tr>
-                            <tr class="hover:bg-gray-50 transition">
-                                <td class="px-6 py-4 text-gray-600">09:30 AM</td>
-                                <td class="px-6 py-4 font-bold text-blue-600">Kelembaban</td>
-                                <td class="px-6 py-4 text-gray-700">Tanah kering, pompa air menyala otomatis.</td>
-                                <td class="px-6 py-4"><span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold">Resolved</span></td>
+                        <tbody id="alert-log-body" class="divide-y divide-gray-100">
+                            <tr>
+                                <td colspan="5" class="text-center text-gray-400 py-4">
+                                    <i class="fas fa-check-circle mr-2"></i>
+                                    Belum ada peringatan
+                                </td>
                             </tr>
                         </tbody>
                     </table>
@@ -301,16 +324,7 @@
                         updateTimeElement.textContent = `Last Update: ${timestamp}`;
                         const mapUrl = `https://maps.google.com/maps?q=${lat},${lng}&z=15&output=embed`;
                         mapContainer.innerHTML = `
-                            <iframe 
-                                src="${mapUrl}" 
-                                width="100%" 
-                                height="100%" 
-                                style="border:0; border-radius: 12px;" 
-                                allowfullscreen="" 
-                                loading="lazy" 
-                                referrerpolicy="no-referrer-when-downgrade">
-                            </iframe>
-                        `;
+                            <iframe src="${mapUrl}" width="100%" height="100%" style="border:0; border-radius: 12px;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>`;
                     },
                     (error) => {
                         let errorMessage = '';
@@ -337,7 +351,7 @@
             } else {
                 mapContainer.innerHTML = `<div class="text-center p-4 text-red-500">Browser Anda tidak mendukung Geolocation API.</div>`;
                 coordinateElement.textContent = 'Tidak Didukung';
-                updateTimeElement.textContent = 'Last Update: N/A';
+                updateTimeElement.textContent = 'Last Update: ...';
             }
         }
         function updateStatusIndicator(status) {
@@ -354,8 +368,6 @@
                 }
             }
         }
-        
-        //MENARIK GENERATE SENSOR AMBIL DATA DARI API
         async function generateSensorData() {
             try {
                 const response = await fetch('{{ route("api.sensor.generate") }}', {
@@ -372,7 +384,6 @@
                 console.error('Error generating sensor data:', error);
             }
         }
-        
         setInterval(updateSensorDataFromFirebase, 2000);
         setInterval(generateSensorData, 10000);
         updateSensorDataFromFirebase();
@@ -402,7 +413,6 @@
                                 });
                             }
                         });
-                        console.log('Debug - Disease stats from jumlah_disease_terdeteksi:', diseaseStats);
                     }
                     const activeDiseases = {};
                     Object.entries(diseaseStats).forEach(([name, count]) => {
@@ -426,14 +436,11 @@
                 return;
             }
             const totalCases = Object.values(diseaseData).reduce((sum, count) => sum + count, 0);
-
-            //TOOLTIP CARD
             let tooltipHtml = `
                 <div class="flex justify-between items-center mb-2 pb-2 border-b">
                     <span class="text-xs font-bold text-gray-500">Total Kasus:</span>
                     <span class="text-sm font-bold text-red-600">${totalCases}</span>
-                </div>
-            `;
+                </div>`;
             
             if (Object.keys(diseaseData).length > 0) {
                 tooltipHtml += Object.entries(diseaseData).map(([name, count]) => 
@@ -448,7 +455,6 @@
             
             tooltipContentElement.innerHTML = tooltipHtml;
         }
-        // Event listener untuk mode change
         document.getElementById('disease-data-mode').addEventListener('change', async () => {
             const diseaseData = await getDiseaseStats();
             updateDiseaseTooltip(diseaseData);
@@ -460,5 +466,303 @@
         }
         setInterval(updateAllData, 2000);
         updateAllData();
+        
+        let alertLogs = JSON.parse(localStorage.getItem('alertLogs') || '[]');
+        const MAX_ALERT_LOGS = 50;
+        function initAlertLog() {
+            updateAlertLogTable();
+        }
+        
+        function addAlertLog(sensorType, message, status = 'Warning') {
+            const alert = {
+                id: Date.now(),
+                waktu: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+                sensor: sensorType,
+                pesan: message,
+                status: status,
+                timestamp: new Date().toISOString()
+            };
+            alertLogs.unshift(alert);
+            
+            if (alertLogs.length > MAX_ALERT_LOGS) {
+                alertLogs = alertLogs.slice(0, MAX_ALERT_LOGS);
+            }
+            localStorage.setItem('alertLogs', JSON.stringify(alertLogs));
+            updateAlertLogTable();
+            showNotification(message, status.toLowerCase(), 8000);
+        }
+        
+        function updateAlertLogTable() {
+            const tableBody = document.getElementById('alert-log-body');
+            const alertCount = document.getElementById('alert-count');
+            if (!tableBody) return;
+            if (alertCount) {
+                const activeAlerts = alertLogs.filter(alert => alert.status !== 'Resolved').length;
+                alertCount.textContent = activeAlerts;
+                alertCount.style.display = activeAlerts > 0 ? 'inline-block' : 'none';
+            }
+            if (alertLogs.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center text-gray-400 py-4">
+                            <i class="fas fa-check-circle mr-2"></i>
+                            Belum ada peringatan
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tableBody.innerHTML = alertLogs.map(alert => {
+                const statusColor = {
+                    'Warning': 'text-yellow-600 bg-yellow-50',
+                    'Resolved': 'text-green-600 bg-green-50',
+                    'Critical': 'text-red-600 bg-red-50',
+                    'Info': 'text-blue-600 bg-blue-50'
+                }[alert.status] || 'text-gray-600 bg-gray-50';
+                
+                const sensorIcon = {
+                    'Suhu': '<i class="fas fa-temperature-high text-red-500"></i>',
+                    'Kelembaban': '<i class="fas fa-tint text-blue-500"></i>',
+                    'Cahaya': '<i class="fas fa-sun text-yellow-500"></i>',
+                    'pH': '<i class="fas fa-flask text-purple-500"></i>',
+                    'Nutrisi': '<i class="fas fa-leaf text-green-500"></i>'
+                }[alert.sensor] || '<i class="fas fa-sensor text-gray-500"></i>';
+                
+                return `
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="px-4 py-3 text-sm text-gray-900">${alert.waktu}</td>
+                        <td class="px-4 py-3 text-sm">
+                            <span class="inline-flex items-center gap-2">
+                                ${sensorIcon}
+                                <span class="font-medium">${alert.sensor}</span>
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-700">${alert.pesan}</td>
+                        <td class="px-4 py-3">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor}">
+                                ${alert.status}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-sm">
+                            <button onclick="resolveAlert(${alert.id})" class="text-blue-600 hover:text-blue-800 transition-colors" title="Resolve">
+                                <i class="fas fa-check"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        window.resolveAlert = function(alertId) {
+            const alertIndex = alertLogs.findIndex(alert => alert.id === alertId);
+            if (alertIndex !== -1) {
+                alertLogs[alertIndex].status = 'Resolved';
+                localStorage.setItem('alertLogs', JSON.stringify(alertLogs));
+                updateAlertLogTable();
+                showNotification('Peringatan telah diselesaikan', 'success', 3000);
+            }
+        };
+        window.clearAllAlerts = function() {
+            if (confirm('Apakah Anda yakin ingin menghapus semua riwayat peringatan?')) {
+                alertLogs = [];
+                localStorage.setItem('alertLogs', JSON.stringify(alertLogs));
+                updateAlertLogTable();
+                showNotification('Semua riwayat peringatan telah dihapus', 'info', 3000);
+            }
+        };
+        
+        const originalShowNotification = window.showNotification;
+        window.showNotification = function(message, type = 'info', duration = 5000) {
+            originalShowNotification(message, type, duration);
+            if (type === 'warning' || type === 'error') {
+                const sensorType = message.includes('Suhu') ? 'Suhu' : 
+                                 message.includes('Kelembapan') ? 'Kelembaban' : 
+                                 message.includes('Cahaya') ? 'Cahaya' : 'Sensor';
+                
+                addAlertLog(sensorType, message, type === 'warning' ? 'Warning' : 'Critical');
+            }
+        };
+        
+        const originalCheckDiseaseAlert = window.checkDiseaseAlert;
+        window.checkDiseaseAlert = function() {
+            originalCheckDiseaseAlert();
+            fetch(window.ROBOT_API_URL + '/sensor/data')
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success && result.data) {
+                        const timestamps = Object.keys(result.data);
+                        if (timestamps.length > 0) {
+                            const latestTimestamp = timestamps[timestamps.length - 1];
+                            const latestData = result.data[latestTimestamp];
+                            const suhu = parseFloat(latestData.suhu);
+                            const kelembapan = parseFloat(latestData.kelembapan);
+                            const cahaya = parseFloat(latestData.cahaya);
+                            if (suhu > 30.5) {
+                                addAlertLog('Suhu', `Suhu tinggi: ${suhu}°C (>30.5°C)`, 'Warning');
+                            }
+                            if (kelembapan < 57) {
+                                addAlertLog('Kelembaban', `Kelembapan rendah: ${kelembapan}% (<57%)`, 'Warning');
+                            }
+                            if (kelembapan > 80) {
+                                addAlertLog('Kelembaban', `Kelembapan tinggi: ${kelembapan}% (>80%)`, 'Warning');
+                            }
+                            if (cahaya > 1400) {
+                                addAlertLog('Cahaya', `Intensitas cahaya tinggi: ${cahaya} Lux (>1400)`, 'Warning');
+                            }
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.log('[ALERT LOG] Error checking sensor data:', error);
+                });
+        };
+        initAlertLog();
+        
+        let forumPosts = [];
+        const MAX_FORUM_POSTS = 4;
+        async function loadForumPosts() {
+            try {
+                const response = await fetch('/api/forum/latest');
+                const result = await response.json();
+                
+                if (result.success && result.posts) {
+                    forumPosts = result.posts
+                        .sort((a, b) => (b.likes || 0) - (a.likes || 0))
+                        .slice(0, MAX_FORUM_POSTS);
+                    
+                    console.log('[FORUM] Loaded posts from database:', forumPosts.length, 'posts');
+                    updateForumHighlights();
+                } else {
+                    console.log('[FORUM] No posts found in database');
+                    forumPosts = [];
+                    updateForumHighlights();
+                }
+                
+            } catch (error) {
+                console.error('[FORUM] Error loading posts from database:', error);
+                forumPosts = [];
+                updateForumHighlights();
+            }
+        }
+        
+        function updateForumHighlights() {
+            const container = document.getElementById('forum-highlights');
+            const countElement = document.getElementById('forum-count');
+            if (!container) return;
+            if (countElement) {
+                countElement.textContent = forumPosts.length;
+            }
+            if (forumPosts.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-gray-400 py-8">
+                        <i class="fas fa-comments text-4xl mb-4"></i>
+                        <p class="text-sm">Belum ada postingan forum</p>
+                        <a href="/forum" class="text-blue-600 hover:underline text-sm mt-2 inline-block">Buat postingan pertama</a>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = forumPosts.map(post => {
+                const categoryColors = {
+                    'Pupuk dan Nutrisi Tanaman': 'bg-green-100 text-green-700',
+                    'Pestisida dan Obat Tanaman': 'bg-red-100 text-red-700',
+                    'Benih dan Bibit Unggul': 'bg-yellow-100 text-yellow-700',
+                    'Alat Pertanian': 'bg-blue-100 text-blue-700',
+                    'Sarana Produksi': 'bg-purple-100 text-purple-700',
+                    'Diskusi Umum': 'bg-gray-100 text-gray-700'
+                };
+                
+                const categoryColor = categoryColors[post.category] || 'bg-gray-100 text-gray-700';
+                return `
+                    <div class="border border-gray-200 rounded-xl p-4 hover:shadow-lg transition-all duration-300 cursor-pointer hover:border-purple-300 group" onclick="window.location.href='${post.link || `/forum/post/${post.id}`}'">
+                        <div class="flex justify-between items-start mb-3">
+                            <h4 class="font-bold text-gray-800 text-sm flex-1 mr-2 line-clamp-2 group-hover:text-purple-700 transition-colors">${post.title}</h4>
+                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${categoryColor} flex-shrink-0">
+                                ${post.category}
+                            </span>
+                        </div>
+                        <p class="text-gray-600 text-xs mb-4 line-clamp-3 leading-relaxed">${post.excerpt}</p>
+                        <div class="flex justify-between items-center">
+                            <div class="flex items-center gap-3 text-xs text-gray-500">
+                                <span class="flex items-center gap-1 font-medium">
+                                    <i class="fas fa-user-circle text-purple-500"></i>
+                                    ${post.author}
+                                </span>
+                                <span class="flex items-center gap-1">
+                                    <i class="fas fa-clock text-blue-500"></i>
+                                    ${post.created_at}
+                                </span>
+                            </div>
+                            <div class="flex items-center gap-2 text-xs">
+                                <span class="flex items-center gap-1 bg-blue-50 text-blue-600 px-2 py-1 rounded-full font-medium">
+                                    <i class="fas fa-comment"></i>
+                                    ${post.replies || 0}
+                                </span>
+                                <span class="flex items-center gap-1 bg-red-50 text-red-600 px-2 py-1 rounded-full font-medium">
+                                    <i class="fas fa-heart"></i>
+                                    ${post.likes || 0}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        window.refreshForumPosts = function() {
+            const container = document.getElementById('forum-highlights');
+            if (container) {
+                container.innerHTML = `
+                    <div class="text-center text-gray-400 py-8">
+                        <i class="fas fa-spinner fa-spin text-4xl mb-4"></i>
+                        <p class="text-sm">Memuat postingan...</p>
+                    </div>
+                `;
+            }
+            loadForumPosts();
+        };
+        window.navigateToPost = function(url) {
+            if (window.location.pathname === '/forum') {
+                const match = url.match(/#post-(\d+)/);
+                if (match) {
+                    const postId = match[1];
+                    const targetElement = document.getElementById(`post-${postId}`);
+                    
+                    if (targetElement) {
+                        targetElement.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                        targetElement.classList.add('ring-2', 'ring-purple-400', 'ring-offset-2');
+                        setTimeout(() => {
+                            targetElement.classList.remove('ring-2', 'ring-purple-400', 'ring-offset-2');
+                        }, 2000);
+                        
+                        return;
+                    }
+                }
+            }
+            window.location.href = url;
+        };
+        loadForumPosts();
+        setInterval(loadForumPosts, 30000);
+        
+        function addTestAlertButtons() {
+            const headerDiv = document.querySelector('x-slot[name="header"] > div');
+            if (headerDiv && !document.getElementById('test-alert-buttons')) {
+                const testDiv = document.createElement('div');
+                testDiv.id = 'test-alert-buttons';
+                testDiv.className = 'flex gap-2';
+                testDiv.innerHTML = `
+                    <button onclick="addAlertLog('Suhu', 'Test alert suhu tinggi', 'Warning')" class="px-3 py-1 bg-orange-500 text-white text-xs rounded-lg hover:bg-orange-600 transition">Test Alert Log</button>
+                    <button onclick="addAlertLog('Kelembaban', 'Test alert kelembapan rendah', 'Critical')" class="px-3 py-1 bg-red-500 text-white text-xs rounded-lg hover:bg-red-600 transition">Test Critical</button>
+                    <button onclick="addAlertLog('Cahaya', 'Test alert cahaya tinggi', 'Warning')" class="px-3 py-1 bg-yellow-500 text-white text-xs rounded-lg hover:bg-yellow-600 transition">Test Cahaya</button>
+                `;
+                headerDiv.appendChild(testDiv);
+            }
+        }
+        addTestAlertButtons();
     </script>
 </x-app-layout>

@@ -8,7 +8,6 @@ class SensorSimulator {
         const randomSuhu = (Math.random() * (31 - 28) + 28).toFixed(1);
         const randomHum = Math.floor(Math.random() * (65 - 55) + 55);
         const randomLux = Math.floor(Math.random() * (1500 - 800) + 800);
-        //THRESHOLD SENSOR
         let statusSensor = 'Normal';
         if (randomSuhu > 30.5) {
             statusSensor = 'Warning - Suhu Tinggi';
@@ -27,7 +26,6 @@ class SensorSimulator {
         };
     }
     
-    //SAVE KE DATABASE
     async saveSensorData() {
         try {
             const sensorData = this.generateRandomSensorData();
@@ -39,6 +37,8 @@ class SensorSimulator {
         try {
             console.log('[SENSOR] Sending data to:', window.ROBOT_API_URL + '/sensor/data');
             console.log('[SENSOR] Data:', sensorData);
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
             
             const response = await fetch(window.ROBOT_API_URL + '/sensor/data', {
                 method: 'POST',
@@ -66,7 +66,6 @@ class SensorSimulator {
         }
     }
     
-    //UPDATE DETECTIONS
     async updateDetectionsWithSensor() {
         try {
             await fetch('/api/sensor/auto-update-detections', {
@@ -141,7 +140,6 @@ class SensorSimulator {
 }
 window.sensorSimulator = new SensorSimulator();
 
-//INISIALISASI HALAMAN START
 document.addEventListener('DOMContentLoaded', function() {
     window.sensorSimulator.start();
 });

@@ -11,24 +11,16 @@ class MarketplaceController extends Controller
     public function index(Request $request)
     {
         $query = Product::with('seller')->latest();
-        
-        // Filter by kategori
         if ($request->has('category') && $request->category != 'all') {
             $query->where('category', $request->category);
         }
-        
-        // Filter by stock (hanya yang tersedia)
         if ($request->has('in_stock') && $request->in_stock) {
             $query->where('stock', '>', 0);
         }
-        
-        // Search by name
         if ($request->has('search') && !empty($request->search)) {
             $query->where('name', 'like', '%' . $request->search . '%');
         }
-        
         $products = $query->get();
-        
         return view('marketplace.index', compact('products'));
     }
 
@@ -37,12 +29,11 @@ class MarketplaceController extends Controller
         $request->validate([
             'name' => 'required',
             'price' => 'required|numeric',
-            'stock' => 'required|integer|min:1', // Validasi Stok
+            'stock' => 'required|integer|min:1', 
             'whatsapp_number' => 'required',
             'image' => 'required|image|mimes:jpeg,png,jpg|max:2048',
         ]);
 
-        // Simpan langsung ke public folder untuk avoid permission issues
         $imageName = time() . '_' . $request->file('image')->getClientOriginalName();
         $request->file('image')->move(public_path('images/products'), $imageName);
         $imagePath = 'images/products/' . $imageName;
@@ -61,7 +52,6 @@ class MarketplaceController extends Controller
         return redirect()->back()->with('success', 'Produk berhasil dijual!');
     }
 
-    // FUNGSI BARU: UPDATE STOK CEPAT (+/-)
     public function updateStock(Request $request, $id)
     {
         $product = Product::findOrFail($id);
@@ -87,7 +77,6 @@ class MarketplaceController extends Controller
         }
         return abort(403);
     }
-    //Rekomendasi Produk Berdasarkan Penyakit AI
     public function getRecommendation(Request $request)
     {
         $keyword = $request->query('label');
@@ -109,7 +98,6 @@ class MarketplaceController extends Controller
 
         return response()->json(['found' => false]);
     }
-    //TAMPILKAN HALAMAN EDIT
     public function edit($id)
     {
         $product = Product::findOrFail($id);
@@ -119,7 +107,6 @@ class MarketplaceController extends Controller
         return view('marketplace.edit', compact('product'));
     }
 
-    //SIMPAN PERUBAHAN
     public function update(Request $request, $id)
     {
         $product = Product::findOrFail($id);
@@ -137,14 +124,11 @@ class MarketplaceController extends Controller
 
         $imagePath = $product->image;
         if ($request->hasFile('image')) {
-            //GAMBAR BARU AUTO BUANG GAMBAR LAMA
             if($product->image && \Illuminate\Support\Facades\Storage::disk('public')->exists($product->image)){
                 \Illuminate\Support\Facades\Storage::disk('public')->delete($product->image);
             }
             $imagePath = $request->file('image')->store('products', 'public');
         }
-
-        //Update Database
         $product->update([
             'name' => $request->name,
             'description' => $request->description,

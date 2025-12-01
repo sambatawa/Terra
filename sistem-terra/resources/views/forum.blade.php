@@ -4,6 +4,23 @@
             {{ __('Forum Diskusi Komunitas') }}
         </h2>
     </x-slot>
+    
+    <style>
+        .ring-offset-2 {
+            --tw-ring-offset-width: 2px;
+        }
+        .ring-2 {
+            --tw-ring-width: 2px;
+        }
+        .ring-purple-400 {
+            --tw-ring-color: rgb(192 132 252);
+        }
+        .transition-all {
+            transition-property: all;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+            transition-duration: 300ms;
+        }
+    </style>
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">

@@ -6,9 +6,8 @@
     <style>
         @page {
             size: A4;
-            margin: 25mm 20mm 25mm 20mm; /* Top Right Bottom Left - standard document margin */
+            margin: 25mm 20mm 25mm 20mm;
         }
-        
         body {
             font-family: 'Times New Roman', Times, serif;
             font-size: 12px;
@@ -17,27 +16,23 @@
             padding: 0;
             color: #333;
         }
-        
         .header {
             text-align: center;
             border-bottom: 2px solid #6D28D9;
             margin-bottom: 5px;
             page-break-inside: avoid;
         }
-        
         .header h1 {
             color: #6D28D9;
             margin: 0 0 8px 0;
             font-size: 20px;
             font-weight: bold;
         }
-        
         .header p {
             margin: 3px 0;
             color: #555;
             font-size: 11px;
         }
-        
         .table {
             width: 100%;
             border-collapse: collapse;
@@ -103,16 +98,15 @@
             font-size: 11px;
         }
         
-        /* Column width optimizations */
-        .table th:nth-child(1), .table td:nth-child(1) { width: 12%; } /* Waktu */
-        .table th:nth-child(2), .table td:nth-child(2) { width: 15%; } /* Hasil Deteksi */
-        .table th:nth-child(3), .table td:nth-child(3) { width: 8%; }  /* Confidence */
-        .table th:nth-child(4), .table td:nth-child(4) { width: 10%; } /* Status */
-        .table th:nth-child(5), .table td:nth-child(5) { width: 8%; }  /* Suhu */
-        .table th:nth-child(6), .table td:nth-child(6) { width: 8%; }  /* Kelembapan */
-        .table th:nth-child(7), .table td:nth-child(7) { width: 8%; }  /* Cahaya */
-        .table th:nth-child(8), .table td:nth-child(8) { width: 15%; } /* Ciri */
-        .table th:nth-child(9), .table td:nth-child(9) { width: 16%; } /* Rekomendasi */
+        .table th:nth-child(1), .table td:nth-child(1) { width: 12%; } 
+        .table th:nth-child(2), .table td:nth-child(2) { width: 15%; } 
+        .table th:nth-child(3), .table td:nth-child(3) { width: 8%; }  
+        .table th:nth-child(4), .table td:nth-child(4) { width: 10%; } 
+        .table th:nth-child(5), .table td:nth-child(5) { width: 8%; }  
+        .table th:nth-child(6), .table td:nth-child(6) { width: 8%; }  
+        .table th:nth-child(7), .table td:nth-child(7) { width: 8%; }
+        .table th:nth-child(8), .table td:nth-child(8) { width: 15%; } 
+        .table th:nth-child(9), .table td:nth-child(9) { width: 16%; }
     </style>
 </head>
 <body>

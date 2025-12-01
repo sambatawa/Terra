@@ -215,10 +215,8 @@
             
             if (!summaryDiv) return;
             console.log('Processing detection data:', detectionData);
-            //TAMPIL LATEST DETECTION
             let latestDetection = null;
             let latestTimestamp = 0;
-            
             Object.keys(detectionData).forEach(key => {
                 const detection = detectionData[key];
                 const timestamp = parseInt(key) || detection.timestamp || detection.created_at || 0;
@@ -238,7 +236,6 @@
                 return;
             }
             
-            //DATA
             const disease = latestDetection.dominan_disease || latestDetection.label || 'Tidak Dikenali';
             const confidence = latestDetection.confidence || latestDetection.dominan_confidence_avg || 0;
             const sensorData = latestDetection.sensor_rata_rata || {};
@@ -251,8 +248,6 @@
             console.log('Extracted data:', { disease, confidence, suhu, kelembapan, cahaya, ciri, rekomendasi });
             const now = new Date();
             updateTimeSpan.textContent = `Update: ${now.toLocaleTimeString('id-ID')}`;
-            
-            //DISPLAY SUMMARY
             summaryDiv.innerHTML = `
                 <div class="space-y-2">
                     <div class="flex justify-between items-center">

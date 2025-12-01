@@ -9,9 +9,6 @@ use Illuminate\Http\JsonResponse;
 
 class SensorApiController extends Controller
 {
-    /**
-     * Get current sensor data (real-time simulation)
-     */
     public function getCurrent(): JsonResponse
     {
         $sensorData = SensorDataService::getLatestSensorData();
@@ -23,9 +20,6 @@ class SensorApiController extends Controller
         ]);
     }
     
-    /**
-     * Get sensor history data
-     */
     public function getHistory(Request $request): JsonResponse
     {
         $count = $request->get('count', 10);
@@ -38,9 +32,6 @@ class SensorApiController extends Controller
         ]);
     }
     
-    /**
-     * Generate and save sensor data to Firebase
-     */
     public function generateAndSave(): JsonResponse
     {
         $success = SensorDataService::saveSensorDataToFirebase();
@@ -58,9 +49,6 @@ class SensorApiController extends Controller
         }
     }
     
-    /**
-     * Get sensor data from Firebase
-     */
     public function getFromFirebase(): JsonResponse
     {
         try {
@@ -103,9 +91,6 @@ class SensorApiController extends Controller
             ], 500);
         }
     }
-    /**
-     * Auto-update all detections with sensor data
-     */
     public function autoUpdateDetections(Request $request)
     {
         try {

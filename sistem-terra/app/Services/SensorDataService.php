@@ -7,15 +7,11 @@ use Carbon\Carbon;
 
 class SensorDataService
 {
-    /**
-     * Generate random sensor data (mirip dengan sensor.blade.php)
-     */
     public static function generateRandomSensorData(): array
     {
         $randomSuhu = (mt_rand(280, 310) / 10);
         $randomHum = mt_rand(55, 65);
         $randomLux = mt_rand(800, 1500);
-        //THRESHOLD SENSOR
         $statusSensor = 'Normal';
         if ($randomSuhu > 30.5) {
             $statusSensor = 'Warning - Suhu Tinggi';
@@ -33,9 +29,6 @@ class SensorDataService
         ];
     }
     
-    /**
-     * Generate multiple sensor data for history
-     */
     public static function generateSensorHistory(int $count = 10): array
     {
         $sensors = [];
@@ -51,17 +44,10 @@ class SensorDataService
         return array_reverse($sensors);
     }
     
-    /**
-     * Get current sensor data (simulasi real-time)
-     */
     public static function getCurrentSensorData(): array
     {
         return self::generateRandomSensorData();
     }
-    
-    /**
-     * Ambil sensor data terbaru dari sensor_data
-     */
     public static function getLatestSensorData(): ?array
     {
         try {
@@ -73,7 +59,6 @@ class SensorDataService
                 return null;
             }
             
-            //SENSOR DATA TERBARU
             $sensorDataRef = $database->getReference('sensor_data');
             $sensorDataSnapshot = $sensorDataRef->orderByKey()->limitToLast(1)->getSnapshot();
             if (!$sensorDataSnapshot->exists()) {
@@ -86,7 +71,6 @@ class SensorDataService
                 Log::info('Ada tapi isinya kosong');
                 return null;
             }
-            //PAKE KEY YANG UDAH DIBIKIN
             $latestKey = array_key_last($allSensorData);
             $latestData = $allSensorData[$latestKey];
             
@@ -111,9 +95,6 @@ class SensorDataService
         }
     }
         
-    /**
-     * Generate and save sensor data to Firebase
-     */
     public static function saveSensorDataToFirebase(): bool
     {
         try {
@@ -123,10 +104,7 @@ class SensorDataService
                 Log::warning('Firebase gada saveSensorDataToFirebase');
                 return true; 
             }
-            //AKTIF GENERATE ATAS
             $sensorData = self::generateRandomSensorData();
-            
-            //SAVE YA
             $timestamp = time();
             $reference = $database->getReference('sensor_data/' . $timestamp);
             $reference->set($sensorData);
@@ -141,8 +119,6 @@ class SensorDataService
             return false;
         }
     }
-    
-    //UPDATE DATA TERAKHIR SNAPSHOT
     public static function updateAllDetectionsWithSensorData($frontendSensorData = null): array
     {
         try {
@@ -199,7 +175,6 @@ class SensorDataService
                     if (is_array($detections)) {
                         foreach ($detections as $detectionId => $detectionData) {
                             try {
-                                //INI FOLDER autoSimpan
                                 if (!isset($detectionData['sensor_rata_rata']) && 
                                     !isset($detectionData['sensor_data']) && 
                                     !isset($detectionData['sensor_rata-rata'])) {

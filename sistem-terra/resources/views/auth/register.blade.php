@@ -118,8 +118,6 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- Kode Unik Petani (Hanya muncul jika role = petani) -->
                     <div id="kodeUnikField" class="hidden">
                         <label class="block text-sm font-semibold text-gray-700 mb-2">
                             <span class="text-red-500">*</span> Kode Unik Petani
@@ -134,8 +132,6 @@
                         <x-input-error :messages="$errors->get('kode_unik')" class="mt-2" />
                         <p class="text-xs text-gray-500 mt-1">Kode unik 8 karakter</p>
                     </div>
-
-                    <!-- Nomor Registrasi Penyuluh (Hanya muncul jika role = penyuluh) -->
                     <div id="penyuluhField" class="hidden">
                         <label class="block text-sm font-semibold text-gray-700 mb-2">
                             <span class="text-red-500">*</span> Nomor Registrasi Penyuluh
@@ -200,7 +196,6 @@
             const nomorRegistrasiInput = document.getElementById('nomorRegistrasi');
 
             function toggleValidationFields() {
-                // Reset all fields
                 kodeUnikField.classList.add('hidden');
                 kodeUnikInput.required = false;
                 kodeUnikInput.value = '';
@@ -208,8 +203,6 @@
                 penyuluhField.classList.add('hidden');
                 nomorRegistrasiInput.required = false;
                 nomorRegistrasiInput.value = '';
-
-                // Show relevant field based on role
                 if (roleSelect.value === 'petani') {
                     kodeUnikField.classList.remove('hidden');
                     kodeUnikInput.required = true;
@@ -217,11 +210,8 @@
                     penyuluhField.classList.remove('hidden');
                     nomorRegistrasiInput.required = true;
                 }
-                // penjual tidak perlu validasi khusus
             }
             toggleValidationFields();
-
-            // Listen for changes
             roleSelect.addEventListener('change', toggleValidationFields);
         });
     </script>
