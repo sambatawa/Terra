@@ -231,7 +231,6 @@ npm audit
   
   <p>
     <a href="#top">Kembali ke Atas</a> •
-    <a href="https://github.com/sambatawa/Terra-Sm5Pro">📁 Source Code</a> •
-    <a href="https://docs.terra-pro5.com">Dokumentasi</a>
+    <a href="https://github.com/sambatawa/Terra-Sm5Pro">📁 Source Code di drive</a> •
   </p>
 </div>
