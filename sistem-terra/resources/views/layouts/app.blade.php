@@ -31,7 +31,7 @@
             </main>
         </div>
         <script>
-            window.ROBOT_API_URL = 'http://localhost:8001';
+            window.ROBOT_API_URL = '{{ env('BACKEND_API_URL') }}';
             @auth
                 window.authUserId = '{{ Auth::user()->id }}';
             @endauth

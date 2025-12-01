@@ -1,9 +1,19 @@
 #!/bin/bash
 
-#1. Install dependencies
+#1. CLEAR CACHE (Prevent old cache issues)
+php artisan optimize:clear
+
+#2. PERBAIKI IZIN (Wajib untuk mencegah crash)
+chmod -R 777 storage
+chmod -R 777 bootstrap/cache
+
+#3. STORAGE LINK untuk gambar dan assets
+php artisan storage:link
+
+#4. Install dependencies
 composer install --no-dev --optimize-autoloader
 
-#2. Wait for MySQL to be ready
+#5. Wait for MySQL to be ready
 echo "Waiting for MySQL to be ready..."
 while ! php artisan db:show > /dev/null 2>&1; do
     echo "MySQL is not ready yet, waiting 5 seconds..."

@@ -519,7 +519,7 @@ async function autoSaveDetection(detections, countsToSave) {
     try {
         let sensorData = {};
         try {
-            const sensorResponse = await fetch('http://localhost:8001/sensor/data');
+            const sensorResponse = await fetch(window.ROBOT_API_URL + '/sensor/data');
             if (sensorResponse.ok) {
                 const sensorResult = await sensorResponse.json();
                 if (sensorResult.success && sensorResult.data) {
@@ -556,7 +556,7 @@ async function autoSaveDetection(detections, countsToSave) {
             disease_counts: countsToSave
         };
         console.log('[AUTO SAVE] check payload:', JSON.stringify(payload, null, 2));
-        const saveResponse = await fetch('http://localhost:8001/detect/auto', {
+        const saveResponse = await fetch(window.ROBOT_API_URL + '/detect/auto', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

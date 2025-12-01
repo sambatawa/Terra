@@ -36,7 +36,7 @@ return [
     ],
 
     'detection_api' => [
-        'url' => env('DETECTION_API_URL', 'http://localhost:8001'),
+        'url' => env('BACKEND_API_URL', 'http://localhost:8001'),
         'timeout' => env('DETECTION_API_TIMEOUT', 30),
     ],
     'firebase' => [

@@ -13,7 +13,7 @@ class DetectionService
 
     public function __construct()
     {
-        $this->apiUrl = config('services.detection_api.url', 'http://localhost:8001');
+        $this->apiUrl = config('services.detection_api.url', env('BACKEND_API_URL', 'http://localhost:8001'));
         $this->timeout = config('services.detection_api.timeout', 30);
     }
 
