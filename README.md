@@ -93,15 +93,15 @@ composer install
 # Install Node dependencies
 npm install
 
-# Environment setup
+# Env
 cp .env.example .env
 php artisan key:generate
 
-# Database setup
+# Database
 php artisan migrate
 php artisan db:seed
 
-# Build assets
+# Build 
 npm run build
 
 # Link storage
@@ -116,10 +116,10 @@ php artisan serve
 ```bash
 cd ../backendapi
 
-# Create virtual environment
+# env venv
 python -m venv venv
 
-# Activate virtual environment
+# Aktivasi venv
 # Windows: venv\Scripts\activate
 # Linux/Mac: source venv/bin/activate
 
@@ -178,12 +178,12 @@ npm run dev
 
 ### Production Setup
 ```bash
-# 1. Optimize Dependencies
+# 1. Depedencies
 composer install --optimize-autoloader --no-dev
 npm ci --production
 npm run build
 
-# 2. Cache Configuration
+# 2. Cache konfigurasi
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
@@ -198,7 +198,6 @@ APP_DEBUG=false
 
 ### Laravel Testing
 ```bash
-# Run all tests
 php artisan test
 
 # Run specific test suite
