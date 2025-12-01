@@ -12,14 +12,14 @@ done
 
 echo "MySQL is ready!"
 
-#3. Run database migrations
+#5. Run database migrations
 echo "Running database migrations..."
 php artisan migrate --force
 
-#4. Cache configuration and routes
+#6. Cache configuration and routes
 php artisan config:cache
 php artisan route:cache
 
-#5. Start the Laravel server
+#7. Start the Laravel server
 echo "Starting Laravel server on port $PORT..."
 php artisan serve --host=0.0.0.0 --port=$PORT
