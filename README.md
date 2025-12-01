@@ -1,23 +1,14 @@
 <div align="center">
   <h1>Terra</h1>
   <p><strong>Monitoring dan AI Detection Disease menggunakan Eggplant Leaf</strong></p>
-  
-  [![Laravel](https://img.shields.io/badge/Laravel-12.0-FF2D20.svg?style=flat&logo=Laravel)](https://laravel.com)
-  [![FastAPI](https://img.shields.io/badge/FastAPI-0.104-009688.svg?style=flat&logo=FastAPI)](https://fastapi.tiangolo.com)
-  [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.x-38B2AC.svg?style=flat&logo=Tailwind-CSS)](https://tailwindcss.com)
-  [![Firebase](https://img.shields.io/badge/Firebase-Realtime%20Database-FFCA28.svg?style=flat&logo=Firebase)](https://firebase.google.com)
-  [![ONNX](https://img.shields.io/badge/ONNX-Runtime-005CED.svg?style=flat&logo=ONNX)](https://onnx.ai)
+    <p>
+    <a href="https://github.com/sambatawa/Terra-Sm5Pro">📁 Source Code lengkap di drive</a> •
+  </p>
 </div>
 
 ## Tentang Proyek
 
 **Terra** adalah platform pertanian cerdas yang mengintegrasikan teknologi AI, IoT, dan machine learning untuk membantu petani Indonesia dalam monitoring kesehatan tanaman dan meningkatkan produktivitas.
-
-### Visi & Misi
-- **Visi**: Menjadi leading smart farming platform di Indonesia
-- **Misi**: Memberdayakan petani Terung Ungu dengan teknologi modern untuk pertanian berkelanjutan
-
-### Nilai Utama
 - **AI-Powered Disease Detection** - Deteksi penyakit tanaman real-time
 - **IoT Sensor Integration** - Monitoring kondisi lingkungan
 - **Digital Marketplace** - Platform jual beli produk pertanian
@@ -28,15 +19,14 @@
 
 ```
 Terra-Sm5Pro/
-├── sistem-terra/              # Laravel Frontend Application
-│   ├── app/                   # Core application logic
-│   ├── resources/             # Views & assets
-│   ├── public/                # Static files & AI models
-│   └── database/              # Migrations & seeders
-├── backendapi/                # FastAPI Backend Services
-│   ├── main.py               # FastAPI application entry
-│   ├── requirements.txt      # Python dependencies
-│   └── (AI/ML services)      # Model inference services
+├── sistem-terra/            
+│   ├── app/                   
+│   ├── resources/           
+│   ├── public/            
+│   └── database/       
+├── backendapi/     
+│   ├── main.py          
+│   └── requirements.txt
 ```
 
 ### Komunikasi Sistem
@@ -93,15 +83,15 @@ composer install
 # Install Node dependencies
 npm install
 
-# Environment setup
+# Env
 cp .env.example .env
 php artisan key:generate
 
-# Database setup
+# Database
 php artisan migrate
 php artisan db:seed
 
-# Build assets
+# Build 
 npm run build
 
 # Link storage
@@ -116,10 +106,10 @@ php artisan serve
 ```bash
 cd ../backendapi
 
-# Create virtual environment
+# env venv
 python -m venv venv
 
-# Activate virtual environment
+# Aktivasi venv
 # Windows: venv\Scripts\activate
 # Linux/Mac: source venv/bin/activate
 
@@ -178,12 +168,12 @@ npm run dev
 
 ### Production Setup
 ```bash
-# 1. Optimize Dependencies
+# 1. Depedencies
 composer install --optimize-autoloader --no-dev
 npm ci --production
 npm run build
 
-# 2. Cache Configuration
+# 2. Cache konfigurasi
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
@@ -198,7 +188,6 @@ APP_DEBUG=false
 
 ### Laravel Testing
 ```bash
-# Run all tests
 php artisan test
 
 # Run specific test suite
@@ -235,10 +224,4 @@ npm audit
 ```
 <div align="center">
   <p><strong>Memberdayakan Pertanian Terung Ungu dengan Teknologi</strong></p>
-  
-  <p>
-    <a href="#top">Kembali ke Atas</a> •
-    <a href="https://github.com/sambatawa/Terra-Sm5Pro">📁 Source Code</a> •
-    <a href="https://docs.terra-pro5.com">Dokumentasi</a>
-  </p>
 </div>
