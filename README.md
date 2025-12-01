@@ -39,7 +39,7 @@ Terra-Sm5Pro/
 
 ### AI Disease Detection
 - **7 Disease Classes**: Aphids, Bercak Cercospora, Layu Fusarium, Mosaic Virus, Phytophthora, Powdery Mildew, Sehat
-- **Real-time Processing**: WebRTC camera feed dengan ONNX.js
+- **Real-time Processing**: WASM onnxruntime
 - **Confidence Scoring**: Probability analysis untuk setiap deteksi
 - **Auto-save Integration**: Hasil deteksi tersimpan otomatis ke Firebase
 - **Historical Tracking**: Statistik penyakit per periode waktu
@@ -58,7 +58,6 @@ Terra-Sm5Pro/
 - **Transaction History**: Complete audit trail
 
 ### Community Forum
-- **Q&A Platform**: Tanya jawab dengan expert moderation
 - **Discussion Threads**: Kategorisasi topik permasalahan
 - **Engagement Metrics**: Like, comment, view tracking
 - **Expert Badges**: Verification system untuk ahli pertanian
