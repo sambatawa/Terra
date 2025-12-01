@@ -13,6 +13,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
             \App\Http\Middleware\VerifyCsrfToken::class,
+            \App\Http\Middleware\TrustProxies::class,
             \Illuminate\Http\Middleware\TrustHosts::class,
         ]);
         

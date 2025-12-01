@@ -1,7 +1,7 @@
 {
   "build": {
     "builder": "NIXPACKS",
-    "buildCommand": "npm install && npm run build --production && php artisan storage:link && composer install --no-dev --optimize-autoloader"
+    "buildCommand": "npm install && npm run build --production && composer install --no-dev --optimize-autoloader"
   },
   "deploy": {
     "startCommand": "chmod +x start.sh && ./start.sh",
