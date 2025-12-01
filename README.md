@@ -1,6 +1,9 @@
 <div align="center">
   <h1>Terra</h1>
   <p><strong>Monitoring dan AI Detection Disease menggunakan Eggplant Leaf</strong></p>
+    <p>
+    <a href="https://github.com/sambatawa/Terra-Sm5Pro">📁 Source Code lengkap di drive</a> •
+  </p>
 </div>
 
 ## Tentang Proyek
@@ -227,9 +230,4 @@ npm audit
 ```
 <div align="center">
   <p><strong>Memberdayakan Pertanian Terung Ungu dengan Teknologi</strong></p>
-  
-  <p>
-    <a href="#top">Kembali ke Atas</a> •
-    <a href="https://github.com/sambatawa/Terra-Sm5Pro">📁 Source Code di drive</a> •
-  </p>
 </div>
