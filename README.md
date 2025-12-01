@@ -22,15 +22,14 @@
 
 ```
 Terra-Sm5Pro/
-├── sistem-terra/              # Laravel Frontend Application
-│   ├── app/                   # Core application logic
-│   ├── resources/             # Views & assets
-│   ├── public/                # Static files & AI models
-│   └── database/              # Migrations & seeders
-├── backendapi/                # FastAPI Backend Services
-│   ├── main.py               # FastAPI application entry
-│   ├── requirements.txt      # Python dependencies
-│   └── (AI/ML services)      # Model inference services
+├── sistem-terra/            
+│   ├── app/                   
+│   ├── resources/           
+│   ├── public/            
+│   └── database/       
+├── backendapi/     
+│   ├── main.py          
+│   └── requirements.txt
 ```
 
 ### Komunikasi Sistem
