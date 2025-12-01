@@ -13,6 +13,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
             \App\Http\Middleware\VerifyCsrfToken::class,
+            \Illuminate\Http\Middleware\TrustHosts::class,
         ]);
         
         $middleware->alias([
@@ -21,9 +22,4 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
-    })
-    ->withTrustHosts([
-        'terra-sm5pro-production.up.railway.app',
-        'healthcheck.railway.app',
-        'railway.app',
-    ])->create();
+    })->create();
