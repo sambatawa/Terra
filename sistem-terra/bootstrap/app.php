@@ -21,4 +21,9 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
-    })->create();
+    })
+    ->withTrustHosts([
+        'terra-sm5pro-production.up.railway.app',
+        'healthcheck.railway.app',
+        'railway.app',
+    ])->create();
