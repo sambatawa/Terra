@@ -10,7 +10,7 @@ class Product extends Model
 {
     use HasFactory;
     
-    protected $guarded = []; // Biar bisa simpan semua kolom
+    protected $guarded = []; 
     
     protected $casts = [
         'price' => 'integer',
@@ -19,7 +19,6 @@ class Product extends Model
         'updated_at' => 'datetime'
     ];
     
-    // Kategori produk (static mapping)
     public static $categories = [
         'pupuk_nutrisi' => [
             'name' => 'Pupuk & Nutrisi Tanaman',

@@ -25,9 +25,9 @@ class HistoryController extends Controller
             $firebaseDetections = [];
             try {
                 $firebaseService = new FirebaseService();
-                $userData = $firebaseService->getDetections($user->id, null); // Ambil semua data
-                $manualData = $firebaseService->getDetections('manual_user', null); // Ambil semua data
-                $autoSimpanData = $firebaseService->getDetections('autoSimpan', 100); // Ambil 100 data terbaru
+                $userData = $firebaseService->getDetections($user->id, null); 
+                $manualData = $firebaseService->getDetections('manual_user', null); 
+                $autoSimpanData = $firebaseService->getDetections('autoSimpan', 100); 
                 $allFirebaseData = array_merge($userData, $manualData, $autoSimpanData);
                 usort($allFirebaseData, function($a, $b) {
                     $timeA = isset($a['timestamp']) ? (int)$a['timestamp'] : 0;

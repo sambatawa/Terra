@@ -248,7 +248,6 @@
 
 <script>
     function catatKlik(sellerId, productName) {
-        // Kirim data ke server diam-diam (AJAX)
         fetch("{{ route('history.track_click') }}", {
             method: "POST",
             headers: {

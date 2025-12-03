@@ -13,12 +13,9 @@ class ForumController extends Controller
     public function index(Request $request)
     {
         $query = Post::with(['user', 'comments.user', 'likes'])->latest();
-        
-        // Filter by kategori
         if ($request->has('category') && $request->category != 'all') {
             $query->where('category', $request->category);
         }
-        
         $posts = $query->get();
         return view('forum', compact('posts'));
     }
@@ -47,15 +44,13 @@ class ForumController extends Controller
 
         return back()->with('success', 'Diskusi berhasil diposting!');
     }
-
-    // API: Get latest forum posts
     public function latestPosts(Request $request)
     {
         try {
             $posts = Post::with(['user', 'likes', 'comments'])
                 ->withCount(['likes', 'comments'])
                 ->latest()
-                ->take(10) // Get more posts for sorting
+                ->take(10)
                 ->get()
                 ->map(function ($post) {
                     return [
@@ -109,12 +104,12 @@ class ForumController extends Controller
         $like = Like::where('user_id', Auth::id())->where('post_id', $postId)->first();
 
         if ($like) {
-            $like->delete(); // Kalau sudah like, jadi unlike
+            $like->delete();
         } else {
             Like::create([
                 'user_id' => Auth::id(),
                 'post_id' => $postId
-            ]); // Kalau belum, jadi like
+            ]); 
         }
 
         return back();

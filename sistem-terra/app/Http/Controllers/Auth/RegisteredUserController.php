@@ -14,19 +14,11 @@ use Illuminate\View\View;
 
 class RegisteredUserController extends Controller
 {
-    /**
-     * Display the registration view.
-     */
     public function create(): View
     {
         return view('auth.register');
     }
 
-    /**
-     * Handle an incoming registration request.
-     *
-     * @throws \Illuminate\Validation\ValidationException
-     */
     public function store(Request $request): RedirectResponse
     {
         $rules = [
@@ -35,15 +27,17 @@ class RegisteredUserController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'role' => ['required', 'in:user,petani,penjual,penyuluh'],
         ];
-        
-        // Jika role petani, wajib ada kode unik
         if ($request->role === 'petani') {
             $rules['kode_unik'] = [
                 'required', 
                 'string', 
-                'size:8', // TERRA001 = 8 karakter
+                'size:8',
                 function ($attribute, $value, $fail) {
-                    $kodeUnikPetanis = \Cache::get('kode_unik_petanis', []);
+                    $kodeUnikPetanis = \Cache::get('kode_unik_petanis', [
+                        'TERRA167' => 'Inas',
+                        'TERRA125' => 'Rafi',
+                        'TERRA015' => 'Arya',
+                    ]);
                     if (!array_key_exists(strtoupper($value), $kodeUnikPetanis)) {
                         $fail('Kode unik tidak valid. Hubungi admin untuk mendapatkan kode yang benar.');
                     }

@@ -128,8 +128,6 @@
                             </tbody>
                         </table>
                     </div>
-
-                    <!-- Pagination Controls -->
                     <div class="bg-gray-50 px-4 py-3 border-t border-gray-200 flex items-center justify-between">
                         <button id="prevPage" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed">
                             ← Sebelumnya

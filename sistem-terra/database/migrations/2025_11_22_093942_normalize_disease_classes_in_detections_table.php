@@ -8,13 +8,8 @@ use App\Constants\DiseaseClasses;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     * Normalize disease class names untuk konsistensi dengan backendapi
-     */
     public function up(): void
     {
-        // Mapping untuk normalize class names lama ke format baru
         $classMapping = [
             'Aphids' => 'aphids',
             'aphids' => 'aphids',
@@ -38,12 +33,10 @@ return new class extends Migration
             'mosaic virus' => 'mosaic_virus',
         ];
 
-        // Update dominan_disease dan label
         DB::table('detections')->chunkById(100, function ($detections) use ($classMapping) {
             foreach ($detections as $detection) {
                 $updates = [];
                 
-                // Normalize dominan_disease
                 if ($detection->dominan_disease) {
                     $normalized = DiseaseClasses::normalize($detection->dominan_disease);
                     if ($normalized !== $detection->dominan_disease) {
@@ -51,7 +44,6 @@ return new class extends Migration
                     }
                 }
                 
-                // Normalize label
                 if ($detection->label) {
                     $normalized = DiseaseClasses::normalize($detection->label);
                     if ($normalized !== $detection->label) {
@@ -59,31 +51,26 @@ return new class extends Migration
                     }
                 }
                 
-                // Normalize jumlah_disease_terdeteksi - pastikan semua class ada
                 if ($detection->jumlah_disease_terdeteksi) {
                     $counts = is_string($detection->jumlah_disease_terdeteksi) 
                         ? json_decode($detection->jumlah_disease_terdeteksi, true) 
                         : $detection->jumlah_disease_terdeteksi;
                     
                     if (is_array($counts)) {
-                        // Normalize keys dalam counts
                         $normalizedCounts = [];
                         foreach ($counts as $key => $value) {
                             $normalizedKey = DiseaseClasses::normalize($key);
                             $normalizedCounts[$normalizedKey] = $value;
                         }
                         
-                        // Pastikan semua class ada
                         $completeCounts = array_merge(DiseaseClasses::DEFAULT_DETECTION_COUNTS, $normalizedCounts);
                         
-                        // Hanya update jika ada perubahan
                         if (json_encode($completeCounts) !== json_encode($counts)) {
                             $updates['jumlah_disease_terdeteksi'] = json_encode($completeCounts);
                         }
                     }
                 }
                 
-                // Update jika ada perubahan
                 if (!empty($updates)) {
                     DB::table('detections')
                         ->where('id', $detection->id)
@@ -92,11 +79,6 @@ return new class extends Migration
             }
         });
     }
-
-    /**
-     * Reverse the migrations.
-     * Tidak bisa di-reverse karena data sudah dinormalisasi
-     */
     public function down(): void
     {
         // Tidak ada reverse karena ini adalah data normalization

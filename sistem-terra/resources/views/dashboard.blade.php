@@ -15,7 +15,7 @@
                 <div class="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
                     <div>
                         <h3 class="text-3xl md:text-4xl font-extrabold tracking-tight mb-2">
-                            Halo, {{ Auth::user()->name }}! 👋
+                            Halo, {{ Auth::user()->name }}!
                         </h3>
                         <p class="text-purple-100 text-lg font-medium opacity-90">
                             Selamat datang kembali di <span class="font-bold text-white">Terra Ecosystem</span>.
