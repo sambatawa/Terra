@@ -69,7 +69,7 @@ Terra-Sm5Pro/
 
 ### 1. Clone Repository
 ```bash
-git clone https://github.com/sambatawa/Terra-Sm5Pro.git
+git clone https://github.com/sambatawa/Terra.git
 cd Terra-Sm5Pro
 ```
 
