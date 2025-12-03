@@ -3,7 +3,7 @@
   <p><strong>Monitoring dan AI Detection Disease menggunakan Eggplant Leaf</strong></p>
     <p>
     <a href="https://drive.google.com/file/d/1SkTklubLvwbqTvXfpLog8QmYiTl9U5Ps/view?usp=sharing">📁 Source Code lengkap di drive</a>
-    <a href="https://terra-ml.cervosys.app/">Klik ini ke website</a>
+    <a href="https://terra.cervosys.app/">Terra website</a>
   </p>
 </div>
 
