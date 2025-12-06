@@ -136,7 +136,7 @@ Primary Model: public/models/best.onnx
 Backup Model: public/models/best.pt
 Model Classes: 7 disease types + healthy
 Input Size: 640x640 pixels
-Confidence Threshold: 0.3 (configurable)
+Confidence Threshold: 0.3
 Inference Engine: ONNX Runtime Web
 ```
 
@@ -150,77 +150,7 @@ Data Format: JSON
 Storage: Firebase Realtime Database
 ```
 
-## Deployment Guide
 
-### Development Environment
-```bash
-# Frontend (Laravel)
-cd sistem-terra
-php artisan serve --host=0.0.0.0 --port=8000
-
-# Backend (FastAPI)
-cd backendapi
-uvicorn main:app --reload --host=0.0.0.0 --port=8001
-
-# Assets (Vite)
-npm run dev
-```
-
-### Production Setup
-```bash
-# 1. Depedencies
-composer install --optimize-autoloader --no-dev
-npm ci --production
-npm run build
-
-# 2. Cache konfigurasi
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
-
-# 3. Environment Setup
-APP_ENV=production
-APP_DEBUG=false
-
-```
-
-## Testing & Quality Assurance
-
-### Laravel Testing
-```bash
-php artisan test
-
-# Run specific test suite
-php artisan test --filter Feature/AuthTest
-php artisan test --filter Unit/ServiceTest
-
-# Generate coverage report
-php artisan test --coverage
-```
-
-### FastAPI Testing
-```bash
-# Install test dependencies
-pip install pytest pytest-asyncio httpx
-
-# Run tests
-pytest tests/
-
-# Run with coverage
-pytest --cov=. tests/
-```
-
-### Quality Checks
-```bash
-# PHP Code Style
-php artisan pint
-
-# JavaScript Linting
-npm run lint
-
-# Security Audit
-composer audit
-npm audit
 ```
 <div align="center">
   <p><strong>Memberdayakan Pertanian Terung Ungu dengan Teknologi</strong></p>
