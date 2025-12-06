@@ -149,9 +149,6 @@ Supported Sensors:
 Data Format: JSON
 Storage: Firebase Realtime Database
 ```
-
-
-```
 <div align="center">
   <p><strong>Memberdayakan Pertanian Terung Ungu dengan Teknologi</strong></p>
 </div>
